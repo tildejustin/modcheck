@@ -288,7 +288,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
         val checkChangeLogSource = JMenuItem("Changelog")
         checkChangeLogSource.addActionListener {
             try {
-                Desktop.getDesktop().browse(URI("https://github.com/RedLime/ModCheck/releases/tag/" + ModCheck.applicationVersion))
+                Desktop.getDesktop().browse(URI("https://github.com/tildejustin/modcheck/releases/tag/" + ModCheck.applicationVersion))
             } catch (ignored: Exception) {
             }
         }
@@ -309,7 +309,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                     "Download"
                 )
                 if (result == 0) {
-                    Desktop.getDesktop().browse(URI("https://github.com/RedLime/ModCheck/releases/latest"))
+                    Desktop.getDesktop().browse(URI.create("https://github.com/tildejustin/modcheck/releases/latest"))
                 }
             } else {
                 JOptionPane.showMessageDialog(this, "You are using the latest version!")

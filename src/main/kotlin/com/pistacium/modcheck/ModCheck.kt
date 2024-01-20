@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.*
+import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.*
 import javax.swing.JOptionPane
@@ -25,7 +26,7 @@ object ModCheck {
 
     val availableMods: ArrayList<Meta.Mod> = ArrayList()
 
-    const val applicationVersion: String = "1.0"
+    const val applicationVersion: String = "2.0"
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -36,11 +37,11 @@ object ModCheck {
 
                 // Get available versions
                 setStatus(ModCheckStatus.LOADING_AVAILABLE_VERSIONS)
-                availableVersions = Json.decodeFromString(Path.of("/home/justin/IdeaProjects/mcsr-meta/important_versions.json").readText())
+                availableVersions = Json.decodeFromString(URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/main/important_versions.json").toURL().readText())
 
                 // Get mod list
                 setStatus(ModCheckStatus.LOADING_MOD_LIST)
-                val mods = Json.decodeFromString<Meta>(Path.of("/home/justin/IdeaProjects/mcsr-meta/mods.json").readText()).mods
+                val mods = Json.decodeFromString<Meta>(URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/main/mods.json").toURL().readText()).mods
                 frameInstance.progressBar?.value = 60
 
                 setStatus(ModCheckStatus.LOADING_MOD_RESOURCE)
