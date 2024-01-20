@@ -1,0 +1,30 @@
+name: build
+on:
+  push:
+    # ignores tags
+    branches:
+      - "**"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+      - name: validate gradle wrapper
+        uses: gradle/wrapper-validation-action@v1
+      - name: setup java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: 17
+      - name: build
+        run: |
+          chmod +x ./gradlew
+          ./gradlew build
+      - name: upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: build/libs/
