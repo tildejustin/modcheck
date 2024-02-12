@@ -7,10 +7,8 @@ import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.*
 import java.net.URI
-import java.nio.file.Path
 import java.util.concurrent.*
 import javax.swing.JOptionPane
-import kotlin.io.path.readText
 import kotlin.system.exitProcess
 
 object ModCheck {
@@ -26,7 +24,7 @@ object ModCheck {
 
     val availableMods: ArrayList<Meta.Mod> = ArrayList()
 
-    val applicationVersion: String = ModCheck.javaClass.`package`.implementationVersion
+    val applicationVersion: String = ModCheck.javaClass.`package`.implementationVersion ?: "dev"
 
     @JvmStatic
     fun main(args: Array<String>) {
