@@ -62,12 +62,15 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                 selectDirs = instanceDirectories
                 var parentDir = ""
                 val stringBuilder = StringBuilder()
-                for (selectDir in instanceDirectories) {
+                for (selectDir in instanceDirectories.slice(IntRange(0, instanceDirectories.size.coerceAtMost(4) - 1))) {
                     stringBuilder.append(if (parentDir.isEmpty()) selectDir.path else selectDir.path.replace(parentDir, "")).append(", ")
                     parentDir = selectDir.parent
                 }
+                if (instanceDirectories.size > 4) {
+                    stringBuilder.append("and " + (instanceDirectories.size - 4) + " more...")
+                }
                 selectedDirLabel!!.text =
-                    "<html>Selected Instances : <br>" + stringBuilder.substring(0, stringBuilder.length - (if (stringBuilder.isNotEmpty()) 2 else 0)) + "</html>"
+                    "<html>Selected Instances : <br>" + stringBuilder.removeSuffix(", ") + "</html>"
             }
             ModCheckUtils.writeConfig(instanceDirectories[0].parentFile.toPath())
         }
