@@ -135,10 +135,10 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                         if (deleteAllJarCheckbox!!.isSelected) {
                             Files.deleteIfExists(file)
                         } else {
-                            val modFilename = file.name
+                            val modName = file.name.split("-").first().split("+").first()
                             for (targetMod in targetMods) {
                                 val targetModFileName = targetMod.getModVersion(minecraftVersion)?.url?.substringAfterLast("/")
-                                if (targetModFileName == modFilename) {
+                                if (targetModFileName?.startsWith(modName) == true) {
                                     Files.deleteIfExists(file)
                                 }
                             }

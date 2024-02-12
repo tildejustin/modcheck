@@ -26,7 +26,7 @@ object ModCheck {
 
     val availableMods: ArrayList<Meta.Mod> = ArrayList()
 
-    const val applicationVersion: String = "2.0"
+    val applicationVersion: String = ModCheck.javaClass.`package`.implementationVersion
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -42,6 +42,7 @@ object ModCheck {
                 // Get mod list
                 setStatus(ModCheckStatus.LOADING_MOD_LIST)
                 val mods = Json.decodeFromString<Meta>(URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/main/mods.json").toURL().readText()).mods
+                // val mods = Json.decodeFromString<Meta>(Path.of("/home/justin/IdeaProjects/mcsr-meta/mods.json").readText()).mods
                 frameInstance.progressBar?.value = 60
 
                 setStatus(ModCheckStatus.LOADING_MOD_RESOURCE)

@@ -8,7 +8,7 @@ import java.util.*
 import kotlin.io.path.*
 
 object ModCheckUtils {
-    private val config: Path = Path.of("modcheck.json")
+    private val config: Path = Paths.get("modcheck.json")
 
     fun readConfig(): Config? {
         if (!Files.exists(config)) {
@@ -33,7 +33,7 @@ object ModCheckUtils {
     }
 
     fun latestVersion(): String? {
-        val urlRequest = URI.create("https://api.github.com/repos/RedLime/ModCheck/releases/latest").toURL().readText()
+        val urlRequest = URI.create("https://api.github.com/repos/tildejustin/modcheck/releases/latest").toURL().readText()
         val jsonObject = Json.parseToJsonElement(urlRequest).jsonObject
         val newVersion = jsonObject["tag_name"]?.jsonPrimitive?.content ?: return null
         return newVersion

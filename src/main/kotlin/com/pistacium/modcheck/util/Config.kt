@@ -1,9 +1,9 @@
 package com.pistacium.modcheck.util
 
 import kotlinx.serialization.Serializable
-import java.nio.file.Path
+import java.nio.file.*
 
 @Serializable
 data class Config(val filepath: String) {
-    fun getDirectory(): Path = Path.of(filepath)
+    fun getDirectory(): Path = Paths.get(filepath)
 }
