@@ -35,11 +35,11 @@ object ModCheck {
 
                 // Get available versions
                 setStatus(ModCheckStatus.LOADING_AVAILABLE_VERSIONS)
-                availableVersions = Json.decodeFromString(URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/main/important_versions.json").toURL().readText())
+                availableVersions = Json.decodeFromString(URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "main"}/important_versions.json").toURL().readText())
 
                 // Get mod list
                 setStatus(ModCheckStatus.LOADING_MOD_LIST)
-                val mods = Json.decodeFromString<Meta>(URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/main/mods.json").toURL().readText()).mods
+                val mods = Json.decodeFromString<Meta>(URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "main"}/mods.json").toURL().readText()).mods
                 // val mods = Json.decodeFromString<Meta>(Path.of("/home/justin/IdeaProjects/mcsr-meta/mods.json").readText()).mods
                 frameInstance.progressBar?.value = 60
 
