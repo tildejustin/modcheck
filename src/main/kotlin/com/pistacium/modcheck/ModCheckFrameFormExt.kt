@@ -93,7 +93,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                 }
 
                 val modsPath = instancePath.resolve("mods")
-                if (!Files.isDirectory(modsPath)) {
+                if (!Files.exists(modsPath)) {
                     val result = if (ignoreInstance != -1) ignoreInstance else JOptionPane.showConfirmDialog(
                         this,
                         "You have selected a directory but not a minecraft instance directory.\nAre you sure you want to download in this directory?",
@@ -107,9 +107,12 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                         return@addActionListener
                     } else {
                         ignoreInstance = result
-                        modsFileStack.push(instancePath)
+                        // create mods directory if it doesn't exist
+                        Files.createDirectory(modsPath)
+                        modsFileStack.push(modsPath)
                     }
-                } else {
+                // if modsPath is not a folder, ignore the instance
+                } else if (Files.isDirectory(modsPath)) {
                     modsFileStack.push(modsPath)
                 }
             }
