@@ -8,6 +8,7 @@ import java.nio.file.*
 import java.util.*
 import javax.swing.*
 import javax.swing.border.EmptyBorder
+import javax.swing.plaf.FontUIResource
 import javax.swing.plaf.basic.BasicComboBoxEditor
 import kotlin.io.path.*
 
@@ -24,13 +25,12 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
         setLocationRelativeTo(null)
         defaultCloseOperation = EXIT_ON_CLOSE
 
-        // TODO: what is this
-        // val keys: Enumeration<*> = UIManager.getLookAndFeelDefaults().keys()
-        // while (keys.hasMoreElements()) {
-        //     val key = keys.nextElement()
-        //     val value = UIManager.get(key)
-        //     if (value is FontUIResource) UIManager.put(key, FontUIResource("SansSerif", Font.BOLD, 15))
-        // }
+        font = FontUIResource("SansSerif", Font.BOLD, 13);
+        UIManager.getLookAndFeel().defaults.forEach {
+            if (it.value is Font) {
+                UIManager.put(it.key, font)
+            }
+        }
 
         val resource = javaClass.classLoader.getResource("end_crystal.png")
         if (resource != null) iconImage = ImageIcon(resource).image
