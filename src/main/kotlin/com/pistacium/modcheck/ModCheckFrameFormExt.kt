@@ -70,7 +70,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                     stringBuilder.append("and " + (instanceDirectories.size - 4) + " more...")
                 }
                 selectedDirLabel!!.text =
-                    "<html>Selected Instances : <br>" + stringBuilder.removeSuffix(", ") + "</html>"
+                    "<html>Selected Instances: " + stringBuilder.removeSuffix(", ") + "</html>"
             }
             ModCheckUtils.writeConfig(instanceDirectories[0].parentFile.toPath())
         }

@@ -71,6 +71,7 @@
             <properties>
               <font size="14"/>
               <text value="Select Instance Paths"/>
+              <toolTipText value="You may select multiple instances  pressing the Shift or Ctrl key"/>
             </properties>
           </component>
           <component id="f59d8" class="javax.swing.JLabel" binding="selectedDirLabel">
@@ -79,7 +80,7 @@
             </constraints>
             <properties>
               <font size="14"/>
-              <text value="You can select multiple instances by press shift or ctrl key"/>
+              <text value="Selected Instances: none"/>
             </properties>
           </component>
           <grid id="2e6b3" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
