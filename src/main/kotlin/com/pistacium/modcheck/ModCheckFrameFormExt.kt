@@ -1,6 +1,7 @@
 package com.pistacium.modcheck
 
 import com.pistacium.modcheck.util.*
+import io.github.z4kn4fein.semver.Version
 import java.awt.*
 import java.io.File
 import java.net.URI
@@ -25,7 +26,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
         setLocationRelativeTo(null)
         defaultCloseOperation = EXIT_ON_CLOSE
 
-        font = FontUIResource("SansSerif", Font.BOLD, 13);
+        font = FontUIResource("SansSerif", Font.BOLD, 13)
         UIManager.getLookAndFeel().defaults.forEach {
             if (it.value is Font) {
                 UIManager.put(it.key, font)
@@ -111,7 +112,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                         Files.createDirectory(modsPath)
                         modsFileStack.push(modsPath)
                     }
-                // if modsPath is not a folder, ignore the instance
+                    // if modsPath is not a folder, ignore the instance
                 } else if (Files.isDirectory(modsPath)) {
                     modsFileStack.push(modsPath)
                 }
@@ -255,6 +256,55 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                 updateModList()
             }
         }
+
+        updateExistingModsButton.addActionListener {
+            if (selectDirs == null || selectDirs!!.isEmpty()) {
+                return@addActionListener
+            }
+            progressBar.value = 0
+            ModCheck.setStatus(ModCheckStatus.GETTING_INSTALLED_MODS)
+            val resolvedModFolders = ArrayList<Path>()
+            for (dir in selectDirs!!) {
+                var modFolder = dir.toPath()
+                // support for selecting either the outer mmc dir or .minecraft
+                if (modFolder.resolve(".minecraft").isDirectory()) {
+                    modFolder = modFolder.resolve(".minecraft")
+                }
+                modFolder = modFolder.resolve("mods")
+                // no mod folder, no service
+                if (modFolder.isDirectory()) {
+                    resolvedModFolders.add(modFolder)
+                }
+            }
+            ModCheck.setStatus(ModCheckStatus.DOWNLOADING_MOD_FILE)
+            for (modFolder in resolvedModFolders) {
+                // store the file to be replaced, so we don't have to guess the name via string splicing
+                val replacedJars = ArrayList<Pair<Path, Meta.ModVersion>>()
+                for (modJar in modFolder.listDirectoryEntries()) {
+                    // retain .disabled mods
+                    if (modJar.extension != "jar") continue
+                    val fmj = ModCheckUtils.readFabricModJson(modJar) ?: continue
+                    // if mod id is in available mods, find the newest version for the selected version
+                    // we can't get the minecraft version from the instance itself easily while still supporting vanilla launcher
+                    val modVersion = ModCheck.availableMods.find { it.modid == fmj.id || it.name == fmj.name }?.getModVersion(mcVersionCombo.selectedItem as String) ?: continue
+                    if (Version.parse(modVersion.version, false) > Version.parse(fmj.version, false)) {
+                        replacedJars.add(Pair(modJar, modVersion))
+                    }
+                }
+                var count = 0
+                for (newMod in replacedJars) {
+                    // requires that the new mod and old mod have different filenames
+                    if (downloadFile(newMod.second, modFolder)) {
+                        Files.deleteIfExists(newMod.first)
+                    }
+                    count++
+                    progressBar.value = count / replacedJars.size
+                }
+            }
+            progressBar.value = 100
+            ModCheck.setStatus(ModCheckStatus.IDLE)
+            JOptionPane.showMessageDialog(this, "Known mods have been updated!")
+        }
     }
 
     private fun downloadFile(minecraftVersion: String, targetMod: Meta.Mod, instances: Stack<Path>): Boolean {
@@ -264,6 +314,15 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
         instances.forEach {
             it.resolve(filename).writeBytes(bytes)
         }
+        return true
+    }
+
+    // TODO: bytearr caching
+    private fun downloadFile(modVersion: Meta.ModVersion, instance: Path): Boolean {
+        val url = modVersion.url
+        val filename = url.substringAfterLast("/")
+        val bytes = URI.create(url).toURL().readBytes()
+        instance.resolve(filename).writeBytes(bytes)
         return true
     }
 
@@ -401,5 +460,4 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
         modListScroll!!.updateUI()
         downloadButton!!.isEnabled = true
     }
-
 }

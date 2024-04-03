@@ -15,6 +15,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
     implementation("com.jetbrains.intellij.java:java-gui-forms-rt:203.7148.30")
     implementation("com.formdev:flatlaf:3.3")
+    implementation("io.github.z4kn4fein:semver:1.4.2")
 }
 
 kotlin {

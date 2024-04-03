@@ -1,6 +1,7 @@
 package com.pistacium.modcheck.util
 
-import kotlinx.serialization.encodeToString
+import com.pistacium.modcheck.FabricModJson
+import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 import java.net.URI
 import java.nio.file.*
@@ -37,5 +38,21 @@ object ModCheckUtils {
         val jsonObject = Json.parseToJsonElement(urlRequest).jsonObject
         val newVersion = jsonObject["tag_name"]?.jsonPrimitive?.content ?: return null
         return newVersion
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private val json = Json { ignoreUnknownKeys = true; prettyPrint = true; prettyPrintIndent = "  " }
+
+    fun readFabricModJson(mod: Path): FabricModJson? {
+        FileSystems.newFileSystem(mod, null as ClassLoader?).use { fs ->
+            val jsonFilePath = fs.getPath("fabric.mod.json")
+            val jsonData: ByteArray
+            try {
+                jsonData = Files.readAllBytes(jsonFilePath)
+            } catch (e: NoSuchFileException) {
+                return null
+            }
+            return json.decodeFromString<FabricModJson>(String(jsonData))
+        }
     }
 }
