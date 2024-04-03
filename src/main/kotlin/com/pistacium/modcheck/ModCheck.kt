@@ -1,7 +1,7 @@
 package com.pistacium.modcheck
 
 import com.formdev.flatlaf.FlatDarkLaf
-import com.pistacium.modcheck.util.ModCheckStatus
+import com.pistacium.modcheck.util.*
 import kotlinx.serialization.json.Json
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
@@ -35,11 +35,16 @@ object ModCheck {
 
                 // Get available versions
                 setStatus(ModCheckStatus.LOADING_AVAILABLE_VERSIONS)
-                availableVersions = Json.decodeFromString(URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "main"}/important_versions.json").toURL().readText())
+                availableVersions = Json.decodeFromString(
+                    URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "main"}/important_versions.json").toURL()
+                        .readText()
+                )
 
                 // Get mod list
                 setStatus(ModCheckStatus.LOADING_MOD_LIST)
-                val mods = Json.decodeFromString<Meta>(URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "main"}/mods.json").toURL().readText()).mods
+                val mods = Json.decodeFromString<Meta>(
+                    URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "main"}/mods.json").toURL().readText()
+                ).mods
                 // val mods = Json.decodeFromString<Meta>(Path.of("/home/justin/IdeaProjects/mcsr-meta/mods.json").readText()).mods
                 frameInstance.progressBar?.value = 60
 
@@ -53,6 +58,7 @@ object ModCheck {
                 frameInstance.progressBar?.value = 100
                 setStatus(ModCheckStatus.IDLE)
                 frameInstance.updateVersionList()
+                ModCheckUtils.checkForUpdates(false)
             } catch (e: Throwable) {
                 val sw = StringWriter()
                 val pw = PrintWriter(sw)

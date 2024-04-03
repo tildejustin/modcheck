@@ -1,11 +1,14 @@
 package com.pistacium.modcheck.util
 
-import com.pistacium.modcheck.FabricModJson
+import com.pistacium.modcheck.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
+import java.awt.Desktop
+import java.awt.event.ActionEvent
 import java.net.URI
 import java.nio.file.*
 import java.util.*
+import javax.swing.JOptionPane
 import kotlin.io.path.*
 
 object ModCheckUtils {
@@ -53,6 +56,31 @@ object ModCheckUtils {
                 return null
             }
             return json.decodeFromString<FabricModJson>(String(jsonData))
+        }
+    }
+
+    fun checkForUpdates(e: ActionEvent) {
+        checkForUpdates(true)
+    }
+
+    fun checkForUpdates(verbose: Boolean) {
+        val latestVersion = latestVersion()
+        if (latestVersion != null && latestVersion > ModCheck.applicationVersion) {
+            val result = JOptionPane.showOptionDialog(
+                null,
+                "<html><body>Found new ModCheck update!<br><br>Current Version : " + ModCheck.applicationVersion + "<br>Updated Version : " + latestVersion + "</body></html>",
+                "Update Checker",
+                JOptionPane.YES_NO_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                arrayOf("Download", "Cancel"),
+                "Download"
+            )
+            if (result == 0) {
+                Desktop.getDesktop().browse(URI.create("https://github.com/tildejustin/modcheck/releases/latest"))
+            }
+        } else if (verbose) {
+            JOptionPane.showMessageDialog(ModCheck.frameInstance, "You are using the latest version!")
         }
     }
 }

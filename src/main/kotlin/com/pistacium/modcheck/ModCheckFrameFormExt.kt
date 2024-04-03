@@ -360,26 +360,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
         source.add(checkChangeLogSource)
 
         val updateCheckSource = JMenuItem("Check for updates")
-        updateCheckSource.addActionListener {
-            val latestVersion = ModCheckUtils.latestVersion()
-            if (latestVersion != null && latestVersion > ModCheck.applicationVersion) {
-                val result = JOptionPane.showOptionDialog(
-                    null,
-                    "<html><body>Found new ModCheck update!<br><br>Current Version : " + ModCheck.applicationVersion + "<br>Updated Version : " + latestVersion + "</body></html>",
-                    "Update Checker",
-                    JOptionPane.YES_NO_CANCEL_OPTION,
-                    JOptionPane.PLAIN_MESSAGE,
-                    null,
-                    arrayOf("Download", "Cancel"),
-                    "Download"
-                )
-                if (result == 0) {
-                    Desktop.getDesktop().browse(URI.create("https://github.com/tildejustin/modcheck/releases/latest"))
-                }
-            } else {
-                JOptionPane.showMessageDialog(this, "You are using the latest version!")
-            }
-        }
+        updateCheckSource.addActionListener(ModCheckUtils::checkForUpdates)
         source.add(updateCheckSource)
 
         menuBar.add(source)
