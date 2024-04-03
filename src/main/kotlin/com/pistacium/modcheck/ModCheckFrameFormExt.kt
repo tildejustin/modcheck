@@ -410,7 +410,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
             val modVersion = mod.getModVersion(mcVersion)
             if (modVersion != null) {
                 // prioritize sodium-mac
-                if (mod.modid == "sodium" && currentOS == "osx") continue@outer
+                if (mod.modid == "sodium" && currentOS == "osx" && ModCheck.availableMods.find { it.modid == "sodiummac" }?.versions?.find { it.target_version.contains(mcVersion) } != null) continue@outer
                 for (condition in mod.traits) {
                     if (condition == "ssg-only" && !setSeedRadioButton!!.isSelected) continue@outer
                     if (condition == "rsg-only" && !randomSeedRadioButton!!.isSelected) continue@outer
