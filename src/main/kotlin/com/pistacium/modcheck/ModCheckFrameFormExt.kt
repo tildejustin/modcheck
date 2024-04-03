@@ -73,7 +73,9 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                 selectedDirLabel!!.text =
                     "<html>Selected Instances: " + stringBuilder.removeSuffix(", ") + "</html>"
             }
-            ModCheckUtils.writeConfig(instanceDirectories[0].parentFile.toPath())
+            if (instanceDirectories.isNotEmpty()) {
+                ModCheckUtils.writeConfig(instanceDirectories[0].parentFile.toPath())
+            }
         }
 
         progressBar!!.string = "Idle..."
