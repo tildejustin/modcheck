@@ -12,20 +12,40 @@ import javax.swing.JOptionPane
 import kotlin.io.path.*
 
 object ModCheckUtils {
-    private val config: Path = Paths.get("modcheck.json")
+    private val config: Path = localizedConfigPath()
+
+    private fun localizedConfigPath(): Path {
+        val os = currentOS()
+        val home = System.getProperty("user.home").replace("\\", "/")
+        val basePath: Path = when (os) {
+            "linux" -> Paths.get(home, ".config")
+            "osx" -> Paths.get(".")
+            "windows" -> Paths.get(home, "AppData/Local")
+            else -> Paths.get(".")
+        }
+        val old = Paths.get("modcheck.json")
+        val new = basePath.resolve("modcheck.json")
+        // TODO: what is proper macos file loc?
+        if (os != "osx" && Files.exists(old) && !Files.exists(new)) {
+            Files.write(new, Files.readAllBytes(old))
+            Files.delete(old)
+        }
+        return new
+    }
 
     fun readConfig(): Config? {
         if (!Files.exists(config)) {
             return null
         }
-        return Json.decodeFromString<Config>(config.readText())
+        return json.decodeFromString<Config>(config.readText())
     }
 
     fun writeConfig(dir: Path) {
         val config = Config(dir.toString())
-        this.config.writeText(Json.encodeToString(config))
+        this.config.writeText(json.encodeToString(config))
     }
 
+    // TODO: enumify / use stdlib method for this info
     fun currentOS(): String {
         val osName = System.getProperty("os.name").lowercase(Locale.getDefault())
         if (osName.contains("win")) return "windows"
@@ -38,7 +58,7 @@ object ModCheckUtils {
 
     fun latestVersion(): String? {
         val urlRequest = URI.create("https://api.github.com/repos/tildejustin/modcheck/releases/latest").toURL().readText()
-        val jsonObject = Json.parseToJsonElement(urlRequest).jsonObject
+        val jsonObject = json.parseToJsonElement(urlRequest).jsonObject
         val newVersion = jsonObject["tag_name"]?.jsonPrimitive?.content ?: return null
         return newVersion
     }

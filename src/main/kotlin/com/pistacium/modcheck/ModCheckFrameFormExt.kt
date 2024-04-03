@@ -15,7 +15,7 @@ import kotlin.io.path.*
 
 class ModCheckFrameFormExt : ModCheckFrameForm() {
     private val modCheckBoxes = HashMap<Meta.Mod, JCheckBox>()
-    private var currentOS: String? = null
+    private var currentOS: String = ModCheckUtils.currentOS()
     private var selectDirs: Array<File>? = null
 
     init {
