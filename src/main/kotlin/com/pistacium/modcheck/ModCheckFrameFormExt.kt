@@ -151,6 +151,10 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                             }
                         }
                     }
+                    if (file.name.lowercase().contains("serversiderng")) {
+                        askDeleteSSRNG(file)
+                        continue
+                    }
                 }
             }
 
@@ -284,6 +288,11 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                     // retain .disabled mods
                     if (modJar.extension != "jar") continue
                     val fmj = ModCheckUtils.readFabricModJson(modJar) ?: continue
+
+                    if (fmj.id == "serversiderng") {
+                        askDeleteSSRNG(modJar)
+                        continue
+                    }
                     // if mod id is in available mods, find the newest version for the selected version
                     // we can't get the minecraft version from the instance itself easily while still supporting vanilla launcher
                     val modVersion = ModCheck.availableMods.find { it.modid == fmj.id || it.name == fmj.name }?.getModVersion(mcVersionCombo.selectedItem as String) ?: continue
@@ -440,5 +449,17 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
         modListPanel.updateUI()
         modListScroll!!.updateUI()
         downloadButton!!.isEnabled = true
+    }
+
+    private fun askDeleteSSRNG(file: Path) {
+        val shouldDelete = JOptionPane.showConfirmDialog(
+            null,
+            "ServerSideRNG has been detected in your mod folder. As the mod is now illegal, would you like it to be deleted?",
+            UIManager.getString("OptionPane.titleText"),
+            JOptionPane.YES_NO_OPTION
+        ) == JOptionPane.YES_OPTION
+        if (shouldDelete) {
+            Files.deleteIfExists(file)
+        }
     }
 }
