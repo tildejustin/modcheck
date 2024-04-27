@@ -68,6 +68,8 @@ public class ModCheckFrameForm extends JFrame {
         downloadButton.setText("Download");
         panel2.add(downloadButton, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         updateExistingModsButton = new JButton();
+        Font updateExistingModsButtonFont = this.$$$getFont$$$(null, -1, 14, updateExistingModsButton.getFont());
+        if (updateExistingModsButtonFont != null) updateExistingModsButton.setFont(updateExistingModsButtonFont);
         updateExistingModsButton.setText("Update existing mods");
         panel2.add(updateExistingModsButton, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JPanel panel3 = new JPanel();
@@ -93,7 +95,7 @@ public class ModCheckFrameForm extends JFrame {
         label1.setText("Minecraft Version:");
         panel4.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         mcVersionCombo = new JComboBox();
-        Font mcVersionComboFont = this.$$$getFont$$$(null, -1, 15, mcVersionCombo.getFont());
+        Font mcVersionComboFont = this.$$$getFont$$$(null, -1, 14, mcVersionCombo.getFont());
         if (mcVersionComboFont != null) mcVersionCombo.setFont(mcVersionComboFont);
         panel4.add(mcVersionCombo, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JPanel panel5 = new JPanel();
