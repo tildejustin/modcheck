@@ -2,7 +2,6 @@ package com.pistacium.modcheck
 
 import com.formdev.flatlaf.FlatDarkLaf
 import com.pistacium.modcheck.util.*
-import kotlinx.serialization.json.Json
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.*
@@ -35,14 +34,14 @@ object ModCheck {
 
                 // Get available versions
                 setStatus(ModCheckStatus.LOADING_AVAILABLE_VERSIONS)
-                availableVersions = Json.decodeFromString(
+                availableVersions = ModCheckUtils.json.decodeFromString(
                     URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "main"}/important_versions.json").toURL()
                         .readText()
                 )
 
                 // Get mod list
                 setStatus(ModCheckStatus.LOADING_MOD_LIST)
-                val mods = Json.decodeFromString<Meta>(
+                val mods = ModCheckUtils.json.decodeFromString<Meta>(
                     URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "main"}/mods.json").toURL().readText()
                 ).mods
                 // val mods = Json.decodeFromString<Meta>(Path.of("/home/justin/IdeaProjects/mcsr-meta/mods.json").readText()).mods

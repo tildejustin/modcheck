@@ -64,7 +64,7 @@ object ModCheckUtils {
     }
 
     @OptIn(ExperimentalSerializationApi::class)
-    private val json = Json { ignoreUnknownKeys = true; prettyPrint = true; prettyPrintIndent = "  " }
+    val json = Json { ignoreUnknownKeys = true; prettyPrint = true; prettyPrintIndent = "  " }
 
     fun readFabricModJson(mod: Path): FabricModJson? {
         FileSystems.newFileSystem(mod, null as ClassLoader?).use { fs ->
