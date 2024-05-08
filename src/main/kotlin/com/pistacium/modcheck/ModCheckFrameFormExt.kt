@@ -298,7 +298,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                     // if mod id is in available mods, find the newest version for the selected version
                     // we can't get the minecraft version from the instance itself easily while still supporting vanilla launcher
                     val modVersion = ModCheck.availableMods.find { it.modid == fmj.id || it.name == fmj.name }?.getModVersion(mcVersionCombo.selectedItem as String) ?: continue
-                    if (Version.parse(modVersion.version, false) > Version.parse(fmj.version, false)) {
+                    if (modVersion.version != fmj.version) {
                         replacedJars.add(Pair(modJar, modVersion))
                     }
                 }
