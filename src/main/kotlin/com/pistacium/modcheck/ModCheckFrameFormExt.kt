@@ -1,7 +1,6 @@
 package com.pistacium.modcheck
 
 import com.pistacium.modcheck.util.*
-import io.github.z4kn4fein.semver.Version
 import java.awt.*
 import java.io.File
 import java.net.URI
@@ -38,7 +37,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
 
         initMenuBar()
 
-        selectInstancePathsButton!!.addActionListener {
+        selectInstancePathsButton.addActionListener {
             val instanceDir = ModCheckUtils.readConfig()?.getDirectory()
             val pathSelector = JFileChooser(instanceDir?.toFile())
             pathSelector.isMultiSelectionEnabled = true
@@ -70,7 +69,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                 if (instanceDirectories.size > 4) {
                     stringBuilder.append("and " + (instanceDirectories.size - 4) + " more...")
                 }
-                selectedDirLabel!!.text =
+                selectedDirLabel.text =
                     "<html>Selected Instances: " + stringBuilder.removeSuffix(", ") + "</html>"
             }
             if (instanceDirectories.isNotEmpty()) {
@@ -78,8 +77,8 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
             }
         }
 
-        progressBar!!.string = "Idle..."
-        downloadButton!!.addActionListener {
+        progressBar.string = "Idle..."
+        downloadButton.addActionListener {
             if (selectDirs == null || selectDirs!!.isEmpty()) {
                 return@addActionListener
             }
@@ -120,7 +119,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                 }
             }
 
-            if (mcVersionCombo!!.selectedItem == null) {
+            if (mcVersionCombo.selectedItem == null) {
                 JOptionPane.showMessageDialog(this, "Error: selected item is null")
                 downloadButton.isEnabled = true
                 return@addActionListener
@@ -141,7 +140,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                 val modFiles = Files.list(instanceDir) ?: return@addActionListener
                 for (file in modFiles) {
                     if (file.name.endsWith(".jar")) {
-                        if (deleteAllJarCheckbox!!.isSelected) {
+                        if (deleteAllJarCheckbox.isSelected) {
                             Files.deleteIfExists(file)
                         } else {
                             val modName = file.name.split("-").first().split("+").first()
@@ -201,11 +200,11 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
         }
         downloadButton.isEnabled = false
 
-        mcVersionCombo!!.addActionListener { updateModList() }
+        mcVersionCombo.addActionListener { updateModList() }
 
-        selectAllRecommendsButton!!.addActionListener {
+        selectAllRecommendsButton.addActionListener {
             for ((key, value) in modCheckBoxes) {
-                if (!key.recommended
+                if (!key.recommended || !key.getModVersion(mcVersionCombo.selectedItem as String)!!.recommended
                     || key.incompatibilities.stream().anyMatch { incompatible: String ->
                         modCheckBoxes.entries.stream().anyMatch { entry2: Map.Entry<Meta.Mod, JCheckBox> -> entry2.key.name == incompatible && entry2.value.isSelected }
                     }
@@ -223,7 +222,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
             // )
         }
 
-        deselectAllButton!!.addActionListener {
+        deselectAllButton.addActionListener {
             for (cb in modCheckBoxes.values) {
                 cb.isSelected = false
                 cb.isEnabled = true
@@ -231,25 +230,25 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
         }
 
         // TODO: enumification
-        windowsRadioButton!!.addActionListener {
+        windowsRadioButton.addActionListener {
             currentOS = "windows"
             updateModList()
         }
         if (currentOS == "windows") windowsRadioButton.isSelected = true
-        macRadioButton!!.addActionListener {
+        macRadioButton.addActionListener {
             currentOS = "osx"
             updateModList()
         }
         if (currentOS == "osx") macRadioButton.isSelected = true
-        linuxRadioButton!!.addActionListener {
+        linuxRadioButton.addActionListener {
             currentOS = "linux"
             updateModList()
         }
         if (currentOS == "linux") linuxRadioButton.isSelected = true
 
-        randomSeedRadioButton!!.addActionListener { updateModList() }
-        setSeedRadioButton!!.addActionListener { updateModList() }
-        accessibilityCheckBox!!.addActionListener {
+        randomSeedRadioButton.addActionListener { updateModList() }
+        setSeedRadioButton.addActionListener { updateModList() }
+        accessibilityCheckBox.addActionListener {
             if (accessibilityCheckBox.isSelected) {
                 val message = "You may utilize these mods ONLY if you tell the MCSR Team about a medical condition that makes them necessary in advance."
                 val result = JOptionPane.showConfirmDialog(this, message, "THIS OPTION IS NOT FOR ALL!", JOptionPane.OK_CANCEL_OPTION)
@@ -262,6 +261,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                 updateModList()
             }
         }
+        obsoleteCheckBox.addActionListener { updateModList() }
 
         updateExistingModsButton.addActionListener {
             if (selectDirs == null || selectDirs!!.isEmpty()) {
@@ -380,7 +380,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
     }
 
     fun updateVersionList() {
-        mcVersionCombo!!.removeAllItems()
+        mcVersionCombo.removeAllItems()
         for (availableVersion in ModCheck.availableVersions) {
             mcVersionCombo.addItem(availableVersion)
         }
@@ -390,11 +390,11 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
 
 
     private fun updateModList() {
-        modListPanel!!.removeAll()
+        modListPanel.removeAll()
         modListPanel.layout = BoxLayout(modListPanel, BoxLayout.Y_AXIS)
         modCheckBoxes.clear()
 
-        if (mcVersionCombo!!.selectedItem == null) return
+        if (mcVersionCombo.selectedItem == null) return
 
         val mcVersion: String = mcVersionCombo.selectedItem as String
 
@@ -403,10 +403,11 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
             if (modVersion != null) {
                 // prioritize sodium-mac
                 if (mod.modid == "sodium" && currentOS == "osx" && ModCheck.availableMods.find { it.modid == "sodiummac" }?.versions?.find { it.target_version.contains(mcVersion) } != null) continue@outer
+                if ((mod.obsolete || modVersion.obsolete) && !obsoleteCheckBox.isSelected) continue@outer
                 for (condition in mod.traits) {
-                    if (condition == "ssg-only" && !setSeedRadioButton!!.isSelected) continue@outer
-                    if (condition == "rsg-only" && !randomSeedRadioButton!!.isSelected) continue@outer
-                    if (condition == "accessibility" && !accessibilityCheckBox!!.isSelected) continue@outer
+                    if (condition == "ssg-only" && !setSeedRadioButton.isSelected) continue@outer
+                    if (condition == "rsg-only" && !randomSeedRadioButton.isSelected) continue@outer
+                    if (condition == "accessibility" && !accessibilityCheckBox.isSelected) continue@outer
                     if (condition == "mac-only" && currentOS != "osx") continue@outer
                 }
 
@@ -449,8 +450,8 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
             }
         }
         modListPanel.updateUI()
-        modListScroll!!.updateUI()
-        downloadButton!!.isEnabled = true
+        modListScroll.updateUI()
+        downloadButton.isEnabled = true
     }
 
     private fun askDeleteSSRNG(file: Path) {
