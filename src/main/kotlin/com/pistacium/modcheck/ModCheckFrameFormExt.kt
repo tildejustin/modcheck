@@ -89,9 +89,10 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
 
             for (instanceDir in selectDirs!!) {
                 var instancePath = instanceDir.toPath()
-                val dotMinecraft = instancePath.resolve(".minecraft")
-                if (Files.isDirectory(dotMinecraft)) {
+                if (Files.isDirectory(instancePath.resolve(".minecraft"))) {
                     instancePath = instancePath.resolve(".minecraft")
+                } else if (Files.isDirectory(instancePath.resolve("minecraft"))) {
+                    instancePath = instancePath.resolve("minecraft")
                 }
 
                 val modsPath = instancePath.resolve("mods")
