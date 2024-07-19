@@ -250,7 +250,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
         setSeedRadioButton.addActionListener { updateModList() }
         accessibilityCheckBox.addActionListener {
             if (accessibilityCheckBox.isSelected) {
-                val message = "You may utilize these mods ONLY if you tell the MCSR Team about a medical condition that makes them necessary in advance."
+                val message = "These mods have consequences to legality and possibility of rejection if used improperly, please make yourself familiar with the rules about each one if you choose to use them."
                 val result = JOptionPane.showConfirmDialog(this, message, "THIS OPTION IS NOT FOR ALL!", JOptionPane.OK_CANCEL_OPTION)
                 if (result == 0) {
                     updateModList()
