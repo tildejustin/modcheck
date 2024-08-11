@@ -89,33 +89,66 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
 
             for (instanceDir in selectDirs!!) {
                 var instancePath = instanceDir.toPath()
+
+                if (instancePath.fileName.toString() == "mods") {
+                    modsFileStack.push(instancePath)
+                    continue
+                }
+
+                if (instancePath.fileName.toString() in listOf(".minecraft", "minecraft")) {
+                    val modsPath = instancePath.resolve("mods")
+                    if (!Files.exists(modsPath)) {
+                        println("Created 'mods' folder: $modsPath")
+                        Files.createDirectory(modsPath)
+                    }
+                    modsFileStack.push(modsPath)
+                    continue
+                }
+
+                // when adding an new instance in multimc / prism,
+                // right away only mmc-pack.json & instance.cfg get created
+                if (!Files.isDirectory(instancePath.resolve(".minecraft")) &&
+                    !Files.isDirectory(instancePath.resolve("minecraft")) &&
+                    (Files.exists(instancePath.resolve("mmc-pack.json")) ||
+                     Files.exists(instancePath.resolve("instance.cfg")))) {
+                    instancePath = Files.createDirectory(instancePath.resolve(".minecraft"))
+                    println("Created '.minecraft' folder: $instancePath")
+                }
+
                 if (Files.isDirectory(instancePath.resolve(".minecraft"))) {
                     instancePath = instancePath.resolve(".minecraft")
                 } else if (Files.isDirectory(instancePath.resolve("minecraft"))) {
                     instancePath = instancePath.resolve("minecraft")
                 }
 
-                val modsPath = instancePath.resolve("mods")
-                if (!Files.exists(modsPath)) {
-                    val result = if (ignoreInstance != -1) ignoreInstance else JOptionPane.showConfirmDialog(
-                        this,
-                        "You have selected a directory but not a minecraft instance directory.\nAre you sure you want to download in this directory?",
-                        "Wrong instance directory",
-                        JOptionPane.OK_CANCEL_OPTION
-                    )
-
-                    println(result)
-                    if (result != 0) {
-                        downloadButton.isEnabled = true
-                        return@addActionListener
-                    } else {
-                        ignoreInstance = result
-                        // create mods directory if it doesn't exist
+                if (instancePath.fileName.toString() in listOf(".minecraft", "minecraft")) {
+                    val modsPath = instancePath.resolve("mods")
+                    if (!Files.exists(modsPath)) {
+                        println("Created 'mods' folder: $modsPath")
                         Files.createDirectory(modsPath)
-                        modsFileStack.push(modsPath)
                     }
-                    // if modsPath is not a folder, ignore the instance
-                } else if (Files.isDirectory(modsPath)) {
+                    modsFileStack.push(modsPath)
+                    continue
+                }
+
+                val result = if (ignoreInstance != -1) ignoreInstance else JOptionPane.showConfirmDialog(
+                    this,
+                    "You have selected a directory but not a Minecraft instance directory.\nAre you sure you want to download in this directory?",
+                    "Wrong instance directory",
+                    JOptionPane.OK_CANCEL_OPTION
+                )
+
+                if (result != 0) {
+                    downloadButton.isEnabled = true
+                    return@addActionListener
+                } else {
+                    ignoreInstance = result
+
+                    val modsPath = instancePath.resolve("mods")
+                    if (!Files.exists(modsPath)) {
+                        println("Created 'mods' folder: $modsPath")
+                        Files.createDirectory(modsPath)
+                    }
                     modsFileStack.push(modsPath)
                 }
             }
