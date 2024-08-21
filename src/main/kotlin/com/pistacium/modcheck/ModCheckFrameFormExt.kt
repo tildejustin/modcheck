@@ -82,81 +82,59 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
             if (selectDirs == null || selectDirs!!.isEmpty()) {
                 return@addActionListener
             }
+
+            if (mcVersionCombo.selectedItem == null) {
+                JOptionPane.showMessageDialog(this, "Error: selected item is null")
+                downloadButton.isEnabled = true
+                return@addActionListener
+            }
+
             downloadButton.isEnabled = false
             val modsFileStack = Stack<Path>()
 
-            var ignoreInstance = -1
+            var overrideDownloadChecks = false
 
             for (instanceDir in selectDirs!!) {
                 var instancePath = instanceDir.toPath()
 
-                if (instancePath.fileName.toString() == "mods") {
+                // if mods is selected, we don't have to do anything
+                if (instancePath.fileName.toString() == "mods" && Files.isDirectory(instancePath) && instancePath.parent.fileName.toString() in listOf(".minecraft", "minecraft")) {
                     modsFileStack.push(instancePath)
                     continue
-                }
-
-                if (instancePath.fileName.toString() in listOf(".minecraft", "minecraft")) {
-                    val modsPath = instancePath.resolve("mods")
-                    if (!Files.exists(modsPath)) {
-                        println("Created 'mods' folder: $modsPath")
-                        Files.createDirectory(modsPath)
-                    }
-                    modsFileStack.push(modsPath)
-                    continue
-                }
-
-                // when adding an new instance in multimc / prism,
-                // right away only mmc-pack.json & instance.cfg get created
-                if (!Files.isDirectory(instancePath.resolve(".minecraft")) &&
-                    !Files.isDirectory(instancePath.resolve("minecraft")) &&
-                    (Files.exists(instancePath.resolve("mmc-pack.json")) ||
-                     Files.exists(instancePath.resolve("instance.cfg")))) {
-                    instancePath = Files.createDirectory(instancePath.resolve(".minecraft"))
-                    println("Created '.minecraft' folder: $instancePath")
                 }
 
                 if (Files.isDirectory(instancePath.resolve(".minecraft"))) {
                     instancePath = instancePath.resolve(".minecraft")
                 } else if (Files.isDirectory(instancePath.resolve("minecraft"))) {
                     instancePath = instancePath.resolve("minecraft")
+                } else if (Files.exists(instancePath.resolve("mmc-pack.json")) || Files.exists(instancePath.resolve("instance.cfg"))) {
+                    // when adding a new instance in multimc / prism,
+                    // right away only mmc-pack.json & instance.cfg get created
+                    instancePath = Files.createDirectory(instancePath.resolve(".minecraft"))
+                    println("Created '.minecraft' folder for multimc: $instancePath")
                 }
 
-                if (instancePath.fileName.toString() in listOf(".minecraft", "minecraft")) {
-                    val modsPath = instancePath.resolve("mods")
-                    if (!Files.exists(modsPath)) {
-                        println("Created 'mods' folder: $modsPath")
-                        Files.createDirectory(modsPath)
+                if (instancePath.fileName.toString() !in listOf(".minecraft", "minecraft") && !overrideDownloadChecks) {
+                    if (JOptionPane.showConfirmDialog(
+                            this,
+                            "You have selected a directory but not a Minecraft instance directory.\nAre you sure you want to download in this directory?",
+                            "Wrong instance directory",
+                            JOptionPane.OK_CANCEL_OPTION
+                        ) == JOptionPane.CANCEL_OPTION
+                    ) {
+                        downloadButton.isEnabled = true
+                        return@addActionListener
+                    } else {
+                        overrideDownloadChecks = true
                     }
-                    modsFileStack.push(modsPath)
-                    continue
                 }
 
-                val result = if (ignoreInstance != -1) ignoreInstance else JOptionPane.showConfirmDialog(
-                    this,
-                    "You have selected a directory but not a Minecraft instance directory.\nAre you sure you want to download in this directory?",
-                    "Wrong instance directory",
-                    JOptionPane.OK_CANCEL_OPTION
-                )
-
-                if (result != 0) {
-                    downloadButton.isEnabled = true
-                    return@addActionListener
-                } else {
-                    ignoreInstance = result
-
-                    val modsPath = instancePath.resolve("mods")
-                    if (!Files.exists(modsPath)) {
-                        println("Created 'mods' folder: $modsPath")
-                        Files.createDirectory(modsPath)
-                    }
-                    modsFileStack.push(modsPath)
+                val modsPath = instancePath.resolve("mods")
+                if (!Files.exists(modsPath)) {
+                    println("Created 'mods' folder: $modsPath")
+                    Files.createDirectory(modsPath)
                 }
-            }
-
-            if (mcVersionCombo.selectedItem == null) {
-                JOptionPane.showMessageDialog(this, "Error: selected item is null")
-                downloadButton.isEnabled = true
-                return@addActionListener
+                modsFileStack.push(modsPath)
             }
 
             val targetMods = ArrayList<Meta.Mod>()
@@ -215,7 +193,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
 
                 println("Downloading mods complete")
 
-                if (!failedMods.isEmpty()) {
+                if (failedMods.isNotEmpty()) {
                     val failedModString = StringBuilder()
                     for (failedMod in failedMods) {
                         failedModString.append(failedMod.name).append(", ")
