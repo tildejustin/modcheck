@@ -285,8 +285,13 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
             for (dir in selectDirs!!) {
                 var modFolder = dir.toPath()
                 // support for selecting either the outer mmc dir or .minecraft
-                if (modFolder.resolve(".minecraft").isDirectory()) {
+                if (modFolder.isDirectory() && modFolder.fileName.toString() == "mods" && modFolder.parent.name in arrayOf("minecraft", ".minecraft")) {
+                    resolvedModFolders.add(modFolder)
+                    continue
+                } else if (modFolder.resolve(".minecraft").isDirectory()) {
                     modFolder = modFolder.resolve(".minecraft")
+                } else if (modFolder.resolve("minecraft").isDirectory()) {
+                    modFolder = modFolder.resolve("minecraft")
                 }
                 modFolder = modFolder.resolve("mods")
                 // no mod folder, no service
