@@ -27,6 +27,13 @@ object ModCheck {
 
     @JvmStatic
     fun main(args: Array<String>) {
+        // Check for CLI mode
+        if (args.isNotEmpty()) {
+            handleCliMode(args)
+            return
+        }
+        
+        // GUI mode (original behavior)
         FlatDarkLaf.setup()
         threadExecutor.submit {
             try {
@@ -81,5 +88,38 @@ object ModCheck {
                 exitProcess(0)
             }
         }
+    }
+
+    private fun handleCliMode(args: Array<String>) {
+        when (args[0].lowercase()) {
+            "help", "-h", "--help" -> {
+                printHelp()
+            }
+            "version", "-v", "--version" -> {
+                println("ModCheck version: $applicationVersion")
+            }
+            else -> {
+                println("Unknown command: ${args[0]}")
+                println("Use 'help' to see available commands.")
+                exitProcess(1)
+            }
+        }
+    }
+
+    private fun printHelp() {
+        println("""
+            ModCheck CLI
+            
+            Usage: java -jar modcheck.jar [command] [options]
+            
+            Commands:
+              help, -h, --help     Show this help message
+              version, -v, --version  Show version information
+            
+            Examples:
+              ...
+            
+            Run without arguments to start the GUI.
+        """.trimIndent())
     }
 }
