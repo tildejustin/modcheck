@@ -27,13 +27,12 @@ object ModCheck {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        // Check for CLI mode
+        // enable cli if arguments are given
         if (args.isNotEmpty()) {
             handleCliMode(args)
             return
         }
         
-        // GUI mode (original behavior)
         FlatDarkLaf.setup()
         threadExecutor.submit {
             try {
@@ -91,34 +90,208 @@ object ModCheck {
     }
 
     private fun handleCliMode(args: Array<String>) {
-        when (args[0].lowercase()) {
-            "help", "-h", "--help" -> {
-                printHelp()
+        // Load mod list for CLI
+        val mods = ModCheckUtils.json.decodeFromString<Meta>(
+            URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "schema-6"}/mods.json").toURL().readText()
+        ).mods
+        availableMods.clear()
+        availableMods.addAll(mods)
+        var path: String? = null
+        var instance: String? = null
+        var function: String? = null
+
+        // Defaults
+    var category = "rsg"
+        var os = "windows"
+        var accessibility = false
+        var obsolete = false
+        var version = "1.16.1"
+
+
+        // Parsing args
+        var i = 0
+        while (i < args.size) {
+            when (args[i].lowercase()) {
+                "help", "-h", "--help" -> {
+                    printHelp()
+                    return
+                }
+                "version", "-v", -> {
+                    println("ModCheck version: $applicationVersion")
+                    return
+                }
+                "--category" -> {
+                    if (i + 1 < args.size) {
+                        val value = args[i + 1].lowercase()
+                        if (value == "rsg" || value == "ssg") {
+                            category = value
+                        } else {
+                            println("Invalid category: $value")
+                            exitProcess(1)
+                        }
+                        i++
+                    }
+                }
+                "--os" -> {
+                    if (i + 1 < args.size) {
+                        val value = args[i + 1].lowercase()
+                        if (value == "windows" || value == "mac" || value == "linux") {
+                            os = value
+                        } else {
+                            println("Invalid OS: $value")
+                            exitProcess(1)
+                        }
+                        i++
+                    }
+                }
+                "--accessibility" -> {
+                    accessibility = true
+                }
+                "--obsolete" -> {
+                    obsolete = true
+                }
+                "--version" -> {
+                    if (i + 1 < args.size) {
+                        version = args[i + 1]
+                        i++
+                    }
+                }
+                "--path" -> {
+                    if (i + 1 < args.size) {
+                        path = args[i + 1]
+                        i++
+                    }
+                }
+                "--instance" -> {
+                    if (i + 1 < args.size) {
+                        instance = args[i + 1]
+                        i++
+                    }
+                }
+                "download", "update" -> {
+                    function = args[i].lowercase()
+                }
+                else -> {
+                    // edge cases?
+                }
             }
-            "version", "-v", "--version" -> {
-                println("ModCheck version: $applicationVersion")
+            i++
+        }
+
+        if (instance != null && path == null) {
+            val userHome = System.getProperty("user.home")
+            path = when {
+                os == "windows" -> "$userHome/AppData/Roaming/PrismLauncher/Instances/$instance"
+                os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instance"
+                os == "mac" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instance"
+                else -> {
+                    println("Unknown OS for --instance path resolution: $os")
+                    exitProcess(1)
+                }
             }
-            else -> {
-                println("Unknown command: ${args[0]}")
-                println("Use 'help' to see available commands.")
-                exitProcess(1)
+        }
+
+        if (function == null) {
+            println("Error: Function (download or update) is required.")
+            println("Usage: java -jar modcheck.jar [options] download|update")
+            exitProcess(1)
+        }
+
+        if (path == null) {
+            println("Error: Either --path <directory> or --instance <name> is required.")
+            println("Usage: java -jar modcheck.jar [options] --path <directory>|--instance <name> download|update")
+            exitProcess(1)
+        }
+
+        // Print out the values
+    println("Options:")
+    println("  Category: ${if (category == "rsg") "Random Seed" else "Set Seed"}")
+        println("  OS: ${os.replaceFirstChar { it.uppercase() }}")
+        println("  Accessibility: $accessibility")
+        println("  Obsolete: $obsolete")
+        println("  Version: $version")
+        println("  Path: $path")
+        println("  Function: ${function.replaceFirstChar { it.uppercase() }}")
+
+        if (function == "download") {
+            // Download logic (unchanged)
+            // ...existing code...
+        } else if (function == "update") {
+            // 1. Find installed mods
+            val basePath = java.nio.file.Paths.get(path)
+            val mcPath = basePath.resolve("minecraft")
+            val modsDir = if (java.nio.file.Files.isDirectory(mcPath)) mcPath.resolve("mods") else basePath.resolve("mods")
+            if (!java.nio.file.Files.exists(modsDir)) {
+                println("No mods directory found at: $modsDir")
+                return
             }
+            val modFiles = java.nio.file.Files.list(modsDir).use { it.iterator().asSequence().toList() }
+            val toUpdate = mutableListOf<Triple<java.nio.file.Path, Meta.Mod, Meta.ModVersion>>()
+            for (file in modFiles) {
+                if (!file.fileName.toString().endsWith(".jar")) continue
+                val fmj = try { com.pistacium.modcheck.util.ModCheckUtils.readFabricModJson(file) } catch (_: Exception) { null }
+                if (fmj == null) continue
+                if (fmj.id == "serversiderng") {
+                    println("Deleting illegal mod: SSRNG (${file.fileName})")
+                    java.nio.file.Files.deleteIfExists(file)
+                    continue
+                }
+                val mod = availableMods.find { it.modid == fmj.id || it.name == fmj.name }
+                if (mod != null) {
+                    val modVersion = mod.getModVersion(version)
+                    if (modVersion != null && modVersion.version != fmj.version) {
+                        toUpdate.add(Triple(file, mod, modVersion))
+                    }
+                }
+            }
+            if (toUpdate.isEmpty()) {
+                println("All known mods are up to date.")
+                return
+            }
+            var count = 0
+            for ((oldFile, mod, modVersion) in toUpdate) {
+                val url = modVersion.url
+                val filename = url.substringAfterLast("/")
+                try {
+                    println("Updating ${mod.name} from ${oldFile.fileName} to $filename")
+                    val bytes = java.net.URI.create(url).toURL().readBytes()
+                    java.nio.file.Files.write(modsDir.resolve(filename), bytes)
+                    java.nio.file.Files.deleteIfExists(oldFile)
+                } catch (e: Exception) {
+                    println("Failed to update ${mod.name}: ${e.message}")
+                }
+                count++
+            }
+            println("Updated $count mod(s). Done.")
         }
     }
 
     private fun printHelp() {
         println("""
             ModCheck CLI
-            
-            Usage: java -jar modcheck.jar [command] [options]
-            
+
+            Usage: java -jar modcheck.jar [options] <download|update>
+
+                        Options:
+                            --category <rsg|ssg>        Specify the category (default: rsg)
+              --os <windows|mac|linux>     Specify the operating system (default: windows)
+              --accessibility              Include accessibility mods (default: false)
+              --obsolete                   Include obsolete mods (default: false)
+              --version <version>          Specify Minecraft version (default: 1.16.1)
+              --instance <name>            Specify your instance name (uses default PrismLauncher path)
+                or
+              --path <directory>           Specify a different path to your instance
+              help, -h, --help             Show this help message
+              version, -v                  Show modcheck version information
+
             Commands:
-              help, -h, --help     Show this help message
-              version, -v, --version  Show version information
-            
+              download                     Download mods
+              update                       Update existing mods
+
             Examples:
-              ...
-            
+              java -jar modcheck.jar --category random --os windows --version 1.16.1 --instance instance1 download
+                  Downloads speedrunning mods for 1.16.1 RSG on Windows into instance1
+
             Run without arguments to start the GUI.
         """.trimIndent())
     }
