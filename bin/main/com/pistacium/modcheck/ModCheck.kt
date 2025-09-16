@@ -32,6 +32,7 @@ object ModCheck {
             handleCliMode(args)
             return
         }
+        // else run the gui
         
         FlatDarkLaf.setup()
         threadExecutor.submit {
@@ -96,16 +97,17 @@ object ModCheck {
         ).mods
         availableMods.clear()
         availableMods.addAll(mods)
+
+        // Defaults
+        var category = "rsg"
+        var currentOS: String = ModCheckUtils.currentOS()
+        var os = currentOS
+        var accessibility = false
+        var version = "1.16.1"
+
         var path: String? = null
         var instance: String? = null
         var function: String? = null
-
-        // Defaults
-    var category = "rsg"
-        var os = "windows"
-        var accessibility = false
-        var obsolete = false
-        var version = "1.16.1"
 
 
         // Parsing args
@@ -132,23 +134,8 @@ object ModCheck {
                         i++
                     }
                 }
-                "--os" -> {
-                    if (i + 1 < args.size) {
-                        val value = args[i + 1].lowercase()
-                        if (value == "windows" || value == "mac" || value == "linux") {
-                            os = value
-                        } else {
-                            println("Invalid OS: $value")
-                            exitProcess(1)
-                        }
-                        i++
-                    }
-                }
                 "--accessibility" -> {
                     accessibility = true
-                }
-                "--obsolete" -> {
-                    obsolete = true
                 }
                 "--version" -> {
                     if (i + 1 < args.size) {
@@ -181,9 +168,12 @@ object ModCheck {
         if (instance != null && path == null) {
             val userHome = System.getProperty("user.home")
             path = when {
-                os == "windows" -> "$userHome/AppData/Roaming/PrismLauncher/Instances/$instance"
+                os == "windows" -> {
+                    println("Error: --instance is not supported on Windows. Please use --path <directory> instead.")
+                    exitProcess(1)
+                }
                 os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instance"
-                os == "mac" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instance"
+                os == "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instance"
                 else -> {
                     println("Unknown OS for --instance path resolution: $os")
                     exitProcess(1)
@@ -214,15 +204,13 @@ object ModCheck {
         else -> null
     }
     println("Options:")
-    println("  Category: ${if (category == "rsg") "Random Seed" else "Set Seed"}")
+    println("  Category: ${if (category == "rsg") "Random Seed Glitchless" else "Set Seed Glitchless"}")
     println("  OS: ${os.replaceFirstChar { it.uppercase() }}")
     println("  Accessibility: $accessibility")
-    println("  Obsolete: $obsolete")
     println("  Version: $version")
     println("  Instance Path: $path")
 
         if (function == "download") {
-            // Download logic with debug prints
             // 1. Select mods
             val basePath = java.nio.file.Paths.get(path)
             val mcPath = basePath.resolve("minecraft")
@@ -243,20 +231,19 @@ object ModCheck {
                 // prioritize sodium-mac
                 if (
                     mod.modid == "sodium" &&
-                    os == "mac" &&
+                    os == "osx" &&
                     availableMods.find { it.modid == "sodiummac" }
                         ?.versions?.any { version in it.target_version } == true
                 ) return@filter false
-                if (!obsolete && (mod.obsolete || modVersion.obsolete)) return@filter false
+                if (mod.obsolete || modVersion.obsolete) return@filter false
                 for (trait in mod.traits) {
                     if (trait == "ssg-only" && category != "ssg") return@filter false
                     if (trait == "rsg-only" && category != "rsg") return@filter false
                     if (trait == "accessibility" && !accessibility) return@filter false
-                    if (trait == "mac-only" && os != "mac") return@filter false
+                    if (trait == "mac-only" && os != "osx") return@filter false
                 }
                 true
             }
-            println("Selected mods count: ${selectedMods.size}")
             if (selectedMods.isEmpty()) {
                 println("Warning: No mods matched the selection criteria. Nothing to download.")
                 return
@@ -348,25 +335,25 @@ object ModCheck {
 
             Usage: java -jar modcheck.jar [options] <download|update>
 
-                        Options:
-                            --category <rsg|ssg>        Specify the category (default: rsg)
-              --os <windows|mac|linux>     Specify the operating system (default: windows)
-              --accessibility              Include accessibility mods (default: false)
-              --obsolete                   Include obsolete mods (default: false)
-              --version <version>          Specify Minecraft version (default: 1.16.1)
-              --instance <name>            Specify your instance name (uses default PrismLauncher path)
-                or
-              --path <directory>           Specify a different path to your instance
-              help, -h, --help             Show this help message
-              version, -v                  Show modcheck version information
+
+            Options:
+                --category <rsg|ssg>        Specify the category (default: rsg)
+                --version <version>         Specify Minecraft version (default: 1.16.1)
+                --accessibility             Include accessibility mods (default: false)
+                --instance <name>           Specify your instance name (uses default PrismLauncher path)
+                    or
+                --path <directory>          Specify a different path to your instance
+
+                help, -h, --help            Show this help message
+                version, -v                 Show modcheck version information
 
             Commands:
-              download                     Download mods
-              update                       Update existing mods
+                download                     Download mods
+                update                       Update existing mods
 
             Examples:
-              java -jar modcheck.jar --category random --os windows --version 1.16.1 --instance instance1 download
-                  Downloads speedrunning mods for 1.16.1 RSG on Windows into instance1
+                java -jar modcheck.jar --category random --version 1.16.1 --instance instance1 download
+                    Downloads speedrunning mods for 1.16.1 RSG into instance1
 
             Run without arguments to start the GUI.
         """.trimIndent())

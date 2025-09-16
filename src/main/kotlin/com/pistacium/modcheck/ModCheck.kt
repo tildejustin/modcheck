@@ -32,6 +32,7 @@ object ModCheck {
             handleCliMode(args)
             return
         }
+        // else run the gui
         
         FlatDarkLaf.setup()
         threadExecutor.submit {
@@ -96,16 +97,17 @@ object ModCheck {
         ).mods
         availableMods.clear()
         availableMods.addAll(mods)
-        var path: String? = null
-        var instance: String? = null
-        var function: String? = null
 
         // Defaults
         var category = "rsg"
         var currentOS: String = ModCheckUtils.currentOS()
         var os = currentOS
-    var accessibility = false
-    var version = "1.16.1"
+        var accessibility = false
+        var version = "1.16.1"
+
+        var path: String? = null
+        var instance: String? = null
+        var function: String? = null
 
 
         // Parsing args
@@ -202,14 +204,13 @@ object ModCheck {
         else -> null
     }
     println("Options:")
-    println("  Category: ${if (category == "rsg") "Random Seed" else "Set Seed"}")
+    println("  Category: ${if (category == "rsg") "Random Seed Glitchless" else "Set Seed Glitchless"}")
     println("  OS: ${os.replaceFirstChar { it.uppercase() }}")
     println("  Accessibility: $accessibility")
     println("  Version: $version")
     println("  Instance Path: $path")
 
         if (function == "download") {
-            // Download logic with debug prints
             // 1. Select mods
             val basePath = java.nio.file.Paths.get(path)
             val mcPath = basePath.resolve("minecraft")
@@ -234,6 +235,7 @@ object ModCheck {
                     availableMods.find { it.modid == "sodiummac" }
                         ?.versions?.any { version in it.target_version } == true
                 ) return@filter false
+                if (mod.obsolete || modVersion.obsolete) return@filter false
                 for (trait in mod.traits) {
                     if (trait == "ssg-only" && category != "ssg") return@filter false
                     if (trait == "rsg-only" && category != "rsg") return@filter false
@@ -242,7 +244,6 @@ object ModCheck {
                 }
                 true
             }
-            println("Selected mods count: ${selectedMods.size}")
             if (selectedMods.isEmpty()) {
                 println("Warning: No mods matched the selection criteria. Nothing to download.")
                 return
