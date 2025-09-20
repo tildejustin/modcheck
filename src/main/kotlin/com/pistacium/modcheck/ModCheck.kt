@@ -6,8 +6,10 @@ import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.*
 import java.net.URI
+import java.nio.file.*
 import java.util.concurrent.*
 import javax.swing.JOptionPane
+import kotlin.io.path.extension
 import kotlin.system.exitProcess
 
 object ModCheck {
@@ -95,13 +97,11 @@ object ModCheck {
         val mods = ModCheckUtils.json.decodeFromString<Meta>(
             URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "schema-6"}/mods.json").toURL().readText()
         ).mods
-        availableMods.clear()
         availableMods.addAll(mods)
 
         // Defaults
         var category = "rsg"
-        var currentOS: String = ModCheckUtils.currentOS()
-        var os = currentOS
+        var os = ModCheckUtils.currentOS()
         var accessibility = false
         var version = "1.16.1"
 
@@ -118,7 +118,7 @@ object ModCheck {
                     printHelp()
                     return
                 }
-                "version", "-v", -> {
+                "version", "-v" -> {
                     println("ModCheck version: $applicationVersion")
                     return
                 }
@@ -193,38 +193,32 @@ object ModCheck {
         }
 
         // Print out the values
-    // Determine modsDir for debug print
-    val basePath = java.nio.file.Paths.get(path)
-    val mcPath = basePath.resolve("minecraft")
-    val dotMcPath = basePath.resolve(".minecraft")
-    val modsDirDebug = when {
-        java.nio.file.Files.isDirectory(mcPath) && java.nio.file.Files.isDirectory(mcPath.resolve("mods")) -> mcPath.resolve("mods")
-        java.nio.file.Files.isDirectory(dotMcPath) && java.nio.file.Files.isDirectory(dotMcPath.resolve("mods")) -> dotMcPath.resolve("mods")
-        java.nio.file.Files.isDirectory(basePath.resolve("mods")) -> basePath.resolve("mods")
-        else -> null
-    }
-    println("Options:")
-    println("  Category: ${if (category == "rsg") "Random Seed Glitchless" else "Set Seed Glitchless"}")
-    println("  OS: ${os.replaceFirstChar { it.uppercase() }}")
-    println("  Accessibility: $accessibility")
-    println("  Version: $version")
-    println("  Instance Path: $path")
+        val basePath = Paths.get(path)
+        val mcPath = basePath.resolve("minecraft")
+        val dotMcPath = basePath.resolve(".minecraft")
+        val modsDir = when {
+            Files.isDirectory(mcPath) && Files.isDirectory(mcPath.resolve("mods")) -> mcPath.resolve("mods")
+            Files.isDirectory(dotMcPath) && Files.isDirectory(dotMcPath.resolve("mods")) -> dotMcPath.resolve("mods")
+            Files.isDirectory(basePath.resolve("mods")) -> basePath.resolve("mods")
+            Files.isDirectory(basePath) && basePath.endsWith("mods") -> basePath
+            else -> null
+        }
+
+        if (modsDir == null || !Files.exists(modsDir)) {
+            println("No mods directory found at: $modsDir")
+            return
+        }
+
+        println("Options:")
+        println("  Category: ${if (category == "rsg") "Random Seed Glitchless" else "Set Seed Glitchless"}")
+        println("  OS: ${os.replaceFirstChar { it.uppercase() }}")
+        println("  Accessibility: $accessibility")
+        println("  Version: $version")
+        println("  Mod Folder: $modsDir")
 
         if (function == "download") {
             // 1. Select mods
-            val basePath = java.nio.file.Paths.get(path)
-            val mcPath = basePath.resolve("minecraft")
-            val dotMcPath = basePath.resolve(".minecraft")
-            val modsDir = when {
-                java.nio.file.Files.isDirectory(mcPath) && java.nio.file.Files.isDirectory(mcPath.resolve("mods")) -> mcPath.resolve("mods")
-                java.nio.file.Files.isDirectory(dotMcPath) && java.nio.file.Files.isDirectory(dotMcPath.resolve("mods")) -> dotMcPath.resolve("mods")
-                java.nio.file.Files.isDirectory(basePath.resolve("mods")) -> basePath.resolve("mods")
-                else -> null
-            }
-            if (modsDir == null) {
-                println("No mods directory found at: $modsDir")
-                return
-            }
+            // assumes that there are no conflicting recommended mods, which is a choice in meta design I will try to stick to
             val selectedMods = availableMods.filter { mod ->
                 val modVersion = mod.getModVersion(version)
                 if (modVersion == null) return@filter false
@@ -236,6 +230,7 @@ object ModCheck {
                         ?.versions?.any { version in it.target_version } == true
                 ) return@filter false
                 if (mod.obsolete || modVersion.obsolete) return@filter false
+                if (!mod.recommended) return@filter false
                 for (trait in mod.traits) {
                     if (trait == "ssg-only" && category != "ssg") return@filter false
                     if (trait == "rsg-only" && category != "rsg") return@filter false
@@ -247,25 +242,20 @@ object ModCheck {
             if (selectedMods.isEmpty()) {
                 println("Warning: No mods matched the selection criteria. Nothing to download.")
                 return
-            } else {
-                for (mod in selectedMods) {
-                    println("Selected ${mod.name}")
-                }
+            }
+            for (mod in selectedMods) {
+                println("Selected ${mod.name}")
             }
             // 2. Download selected mods
             var count = 0
             for (mod in selectedMods) {
-                val modVersion = mod.getModVersion(version)
-                if (modVersion == null) {
-                    println("Skipping ${mod.name}: no version for $version")
-                    continue
-                }
+                val modVersion = mod.getModVersion(version)!! // null results are thrown out in initial filter
                 val url = modVersion.url
                 val filename = url.substringAfterLast("/")
                 try {
                     println("Downloading ${mod.name}")
-                    val bytes = java.net.URI.create(url).toURL().readBytes()
-                    java.nio.file.Files.write(modsDir.resolve(filename), bytes)
+                    val bytes = URI.create(url).toURL().readBytes()
+                    Files.write(modsDir.resolve(filename), bytes)
                 } catch (e: Exception) {
                     println("Failed to download ${mod.name}: ${e.message}")
                 }
@@ -274,31 +264,12 @@ object ModCheck {
             println("Downloading mods complete")
         } else if (function == "update") {
             // 1. Find installed mods
-            val basePath = java.nio.file.Paths.get(path)
-            val mcPath = basePath.resolve("minecraft")
-            val dotMcPath = basePath.resolve(".minecraft")
-            val modsDir = when {
-                java.nio.file.Files.isDirectory(mcPath) && java.nio.file.Files.isDirectory(mcPath.resolve("mods")) -> mcPath.resolve("mods")
-                java.nio.file.Files.isDirectory(dotMcPath) && java.nio.file.Files.isDirectory(dotMcPath.resolve("mods")) -> dotMcPath.resolve("mods")
-                java.nio.file.Files.isDirectory(basePath.resolve("mods")) -> basePath.resolve("mods")
-                else -> null
-            }
-            if (modsDir == null || !java.nio.file.Files.exists(modsDir)) {
-                println("No mods directory found at: $modsDir")
-                return
-            }
-            println("Resolved mods directory: ${modsDir.toAbsolutePath()}")
-            val modFiles = java.nio.file.Files.list(modsDir).use { it.iterator().asSequence().toList() }
-            val toUpdate = mutableListOf<Triple<java.nio.file.Path, Meta.Mod, Meta.ModVersion>>()
+            val modFiles = Files.list(modsDir)
+            val toUpdate = mutableListOf<Triple<Path, Meta.Mod, Meta.ModVersion>>()
             for (file in modFiles) {
-                if (!file.fileName.toString().endsWith(".jar")) continue
-                val fmj = try { com.pistacium.modcheck.util.ModCheckUtils.readFabricModJson(file) } catch (_: Exception) { null }
+                if (file.extension != "jar") continue
+                val fmj = try { ModCheckUtils.readFabricModJson(file) } catch (_: Exception) { null }
                 if (fmj == null) continue
-                if (fmj.id == "serversiderng") {
-                    println("Deleting illegal mod: SSRNG (${file.fileName})")
-                    java.nio.file.Files.deleteIfExists(file)
-                    continue
-                }
                 val mod = availableMods.find { it.modid == fmj.id || it.name == fmj.name }
                 if (mod != null) {
                     val modVersion = mod.getModVersion(version)
@@ -317,9 +288,9 @@ object ModCheck {
                 val filename = url.substringAfterLast("/")
                 try {
                     println("Updating ${mod.name} from ${oldFile.fileName} to $filename")
-                    val bytes = java.net.URI.create(url).toURL().readBytes()
-                    java.nio.file.Files.write(modsDir.resolve(filename), bytes)
-                    java.nio.file.Files.deleteIfExists(oldFile)
+                    val bytes = URI.create(url).toURL().readBytes()
+                    Files.write(modsDir.resolve(filename), bytes)
+                    Files.deleteIfExists(oldFile)
                 } catch (e: Exception) {
                     println("Failed to update ${mod.name}: ${e.message}")
                 }
