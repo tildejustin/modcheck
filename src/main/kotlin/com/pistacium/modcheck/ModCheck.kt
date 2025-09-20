@@ -201,7 +201,7 @@ object ModCheck {
             Files.isDirectory(mcPath) && Files.isDirectory(mcPath.resolve("mods")) -> mcPath.resolve("mods")
             Files.isDirectory(dotMcPath) && Files.isDirectory(dotMcPath.resolve("mods")) -> dotMcPath.resolve("mods")
             Files.isDirectory(basePath.resolve("mods")) -> basePath.resolve("mods")
-            basePath.endsWith("mods") -> basePath
+            Files.isDirectory(basePath) && basePath.endsWith("mods") -> basePath
             else -> null
         }
 
