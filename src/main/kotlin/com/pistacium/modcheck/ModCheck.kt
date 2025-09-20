@@ -101,8 +101,7 @@ object ModCheck {
 
         // Defaults
         var category = "rsg"
-        var currentOS: String = ModCheckUtils.currentOS()
-        var os = currentOS
+        var os = ModCheckUtils.currentOS()
         var accessibility = false
         var version = "1.16.1"
 
