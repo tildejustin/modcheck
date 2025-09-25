@@ -92,7 +92,7 @@ object ModCheck {
         }
     }
 
-    private fun isValidModPath(path: String): Boolean {
+    private fun isValidPath(path: String): Boolean {
         val basePath = Paths.get(path)
         val mcPath = basePath.resolve("minecraft")
         val dotMcPath = basePath.resolve(".minecraft")
@@ -165,37 +165,37 @@ object ModCheck {
                 }
                 "--path" -> {
                     if (i + 1 < args.size) {
-                        var candidatePath = args[i + 1]
+                        var pathTemporary = args[i + 1]
                         var pathIndex = i + 1
                         
-                        // If the path is not valid and contains no spaces, try concatenating subsequent arguments
-                        while (!isValidModPath(candidatePath) && pathIndex + 1 < args.size) {
-                            // Check if the next argument looks like another flag (starts with -)
+                        // Concatenate arguments until path is valid
+                        while (!isValidPath(pathTemporary) && pathIndex + 1 < args.size) {
+                            // Stop loop if next argument is a flag
                             if (args[pathIndex + 1].startsWith("-")) {
                                 break
                             }
                             pathIndex++
-                            candidatePath += " " + args[pathIndex]
+                            pathTemporary += " " + args[pathIndex]
                         }
                         
-                        path = candidatePath
+                        path = pathTemporary
                         i = pathIndex
                     }
                 }
                 "--instance" -> {
                     if (i + 1 < args.size) {
-                        var candidateInstance = args[i + 1]
+                        var instanceTemporary = args[i + 1]
                         var instanceIndex = i + 1
                         
-                        // Instance names can have spaces, so concatenate until we find a flag, command, or end
+                        // Concatenate arguments until next flag or command (download/update)
                         while (instanceIndex + 1 < args.size && 
                                !args[instanceIndex + 1].startsWith("-") && 
-                               args[instanceIndex + 1].lowercase() !in listOf("download", "update")) {
+                               args[instanceIndex + 1].lowercase() !in listOf("download", "update")) { // Will break if instance name has download or update
                             instanceIndex++
-                            candidateInstance += " " + args[instanceIndex]
+                            instanceTemporary += " " + args[instanceIndex]
                         }
                         
-                        instance = candidateInstance
+                        instance = instanceTemporary
                         i = instanceIndex
                     }
                 }
