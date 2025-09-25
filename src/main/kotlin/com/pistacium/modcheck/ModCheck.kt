@@ -182,13 +182,13 @@ object ModCheck {
         }
 
         if (function == null) {
-            println("Usage: java -jar modcheck.jar [options] download|update")
+            printHelp()
             exitProcess(1)
         }
 
         if (path == null) {
             println("Error: Either --path <directory> or --instance <name> is required.")
-            println("Usage: java -jar modcheck.jar [options] --path <directory>|--instance <name> download|update")
+            printHelp()
             exitProcess(1)
         }
 
