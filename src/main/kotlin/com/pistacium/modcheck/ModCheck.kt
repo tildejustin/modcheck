@@ -92,6 +92,26 @@ object ModCheck {
         }
     }
 
+    private fun isValidModPath(path: String): Boolean {
+        val basePath = Paths.get(path)
+        val mcPath = basePath.resolve("minecraft")
+        val dotMcPath = basePath.resolve(".minecraft")
+        
+        // Check if the path exists and is a directory
+        if (!Files.exists(basePath) || !Files.isDirectory(basePath)) {
+            return false
+        }
+        
+        // Check if it's a valid Minecraft instance structure
+        return when {
+            Files.isDirectory(mcPath) && Files.isDirectory(mcPath.resolve("mods")) -> true
+            Files.isDirectory(dotMcPath) && Files.isDirectory(dotMcPath.resolve("mods")) -> true
+            Files.isDirectory(basePath.resolve("mods")) -> true
+            basePath.endsWith("mods") && Files.isDirectory(basePath) -> true
+            else -> false
+        }
+    }
+
     private fun handleCliMode(args: Array<String>) {
         // Load mod list for CLI
         val mods = ModCheckUtils.json.decodeFromString<Meta>(
@@ -145,14 +165,36 @@ object ModCheck {
                 }
                 "--path" -> {
                     if (i + 1 < args.size) {
-                        path = args[i + 1]
-                        i++
+                        var candidatePath = args[i + 1]
+                        var pathIndex = i + 1
+                        
+                        // If the path is not valid and contains no spaces, try concatenating subsequent arguments
+                        while (!isValidModPath(candidatePath) && pathIndex + 1 < args.size) {
+                            // Check if the next argument looks like another flag (starts with -)
+                            if (args[pathIndex + 1].startsWith("-")) {
+                                break
+                            }
+                            pathIndex++
+                            candidatePath += " " + args[pathIndex]
+                        }
+                        
+                        path = candidatePath
+                        i = pathIndex
                     }
                 }
                 "--instance" -> {
                     if (i + 1 < args.size) {
-                        instance = args[i + 1]
-                        i++
+                        var candidateInstance = args[i + 1]
+                        var instanceIndex = i + 1
+                        
+                        // Instance names can have spaces, so concatenate until we find a flag or end
+                        while (instanceIndex + 1 < args.size && !args[instanceIndex + 1].startsWith("-")) {
+                            instanceIndex++
+                            candidateInstance += " " + args[instanceIndex]
+                        }
+                        
+                        instance = candidateInstance
+                        i = instanceIndex
                     }
                 }
                 "download", "update" -> {
