@@ -187,8 +187,10 @@ object ModCheck {
                         var candidateInstance = args[i + 1]
                         var instanceIndex = i + 1
                         
-                        // Instance names can have spaces, so concatenate until we find a flag or end
-                        while (instanceIndex + 1 < args.size && !args[instanceIndex + 1].startsWith("-")) {
+                        // Instance names can have spaces, so concatenate until we find a flag, command, or end
+                        while (instanceIndex + 1 < args.size && 
+                               !args[instanceIndex + 1].startsWith("-") && 
+                               args[instanceIndex + 1].lowercase() !in listOf("download", "update")) {
                             instanceIndex++
                             candidateInstance += " " + args[instanceIndex]
                         }
