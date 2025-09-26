@@ -92,6 +92,26 @@ object ModCheck {
         }
     }
 
+    private fun isValidPath(path: String): Boolean {
+        val basePath = Paths.get(path)
+        val mcPath = basePath.resolve("minecraft")
+        val dotMcPath = basePath.resolve(".minecraft")
+        
+        // Check if the path exists and is a directory
+        if (!Files.exists(basePath) || !Files.isDirectory(basePath)) {
+            return false
+        }
+        
+        // Check if it's a valid Minecraft instance structure
+        return when {
+            Files.isDirectory(mcPath) && Files.isDirectory(mcPath.resolve("mods")) -> true
+            Files.isDirectory(dotMcPath) && Files.isDirectory(dotMcPath.resolve("mods")) -> true
+            Files.isDirectory(basePath.resolve("mods")) -> true
+            basePath.endsWith("mods") && Files.isDirectory(basePath) -> true
+            else -> false
+        }
+    }
+
     private fun handleCliMode(args: Array<String>) {
         // Load mod list for CLI
         val mods = ModCheckUtils.json.decodeFromString<Meta>(
@@ -145,14 +165,63 @@ object ModCheck {
                 }
                 "--path" -> {
                     if (i + 1 < args.size) {
-                        path = args[i + 1]
-                        i++
+                        var pathTemporary = args[i + 1]
+                        var pathIndex = i + 1
+                        
+                        // Concatenate arguments until path is valid
+                        while (!isValidPath(pathTemporary) && pathIndex + 1 < args.size) {
+                            // Stop loop if next argument is a flag
+                            if (args[pathIndex + 1].startsWith("-")) {
+                                break
+                            }
+                            pathIndex++
+                            pathTemporary += " " + args[pathIndex]
+                        }
+                        
+                        path = pathTemporary
+                        i = pathIndex
                     }
                 }
                 "--instance" -> {
                     if (i + 1 < args.size) {
-                        instance = args[i + 1]
-                        i++
+                        var instanceTemporary = args[i + 1]
+                        var instanceIndex = i + 1
+                        val userHome = System.getProperty("user.home")
+
+                        // Get initial resolved path from instance name
+                        var pathTemporary = when {
+                            os == "windows" -> {
+                                println("Error: --instance is not supported on Windows. Please use --path <directory> instead.")
+                                exitProcess(1)
+                            }
+                            os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instanceTemporary"
+                            os == "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instanceTemporary"
+                            else -> {
+                                println("Unknown OS for --instance path resolution: $os")
+                                exitProcess(1)
+                            }
+                        }
+                        
+                        // Concatenate arguments until path is valid (same loop as --path)
+                        while (!isValidPath(pathTemporary) && instanceIndex + 1 < args.size) {
+                            // Stop loop if next argument is a flag or command
+                            if (args[instanceIndex + 1].startsWith("-") || 
+                                args[instanceIndex + 1].lowercase() in listOf("download", "update")) {
+                                break
+                            }
+                            instanceIndex++
+                            instanceTemporary += " " + args[instanceIndex]
+                            
+                            // Update resolved path with new instance name
+                            pathTemporary = when {
+                                os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instanceTemporary"
+                                os == "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instanceTemporary"
+                                else -> pathTemporary // shouldn't reach here
+                            }
+                        }
+                        
+                        path = pathTemporary
+                        i = instanceIndex
                     }
                 }
                 "download", "update" -> {
@@ -165,30 +234,14 @@ object ModCheck {
             i++
         }
 
-        if (instance != null && path == null) {
-            val userHome = System.getProperty("user.home")
-            path = when {
-                os == "windows" -> {
-                    println("Error: --instance is not supported on Windows. Please use --path <directory> instead.")
-                    exitProcess(1)
-                }
-                os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instance"
-                os == "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instance"
-                else -> {
-                    println("Unknown OS for --instance path resolution: $os")
-                    exitProcess(1)
-                }
-            }
-        }
-
         if (function == null) {
-            println("Usage: java -jar modcheck.jar [options] download|update")
+            printHelp()
             exitProcess(1)
         }
 
         if (path == null) {
             println("Error: Either --path <directory> or --instance <name> is required.")
-            println("Usage: java -jar modcheck.jar [options] --path <directory>|--instance <name> download|update")
+            printHelp()
             exitProcess(1)
         }
 
