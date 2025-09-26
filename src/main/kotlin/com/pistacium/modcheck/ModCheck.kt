@@ -124,9 +124,7 @@ object ModCheck {
         var os = ModCheckUtils.currentOS()
         var accessibility = false
         var version = "1.16.1"
-
         var path: String? = null
-        var instance: String? = null
         var function: String? = null
 
 
