@@ -186,16 +186,41 @@ object ModCheck {
                     if (i + 1 < args.size) {
                         var instanceTemporary = args[i + 1]
                         var instanceIndex = i + 1
-                        
-                        // Concatenate arguments until next flag or command (download/update)
-                        while (instanceIndex + 1 < args.size && 
-                               !args[instanceIndex + 1].startsWith("-") && 
-                               args[instanceIndex + 1].lowercase() !in listOf("download", "update")) { // Will break if instance name has download or update
-                            instanceIndex++
-                            instanceTemporary += " " + args[instanceIndex]
+                        val userHome = System.getProperty("user.home")
+
+                        // Get initial resolved path from instance name
+                        var pathTemporary = when {
+                            os == "windows" -> {
+                                println("Error: --instance is not supported on Windows. Please use --path <directory> instead.")
+                                exitProcess(1)
+                            }
+                            os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instanceTemporary"
+                            os == "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instanceTemporary"
+                            else -> {
+                                println("Unknown OS for --instance path resolution: $os")
+                                exitProcess(1)
+                            }
                         }
                         
-                        instance = instanceTemporary
+                        // Concatenate arguments until path is valid (same loop as --path)
+                        while (!isValidPath(pathTemporary) && instanceIndex + 1 < args.size) {
+                            // Stop loop if next argument is a flag or command
+                            if (args[instanceIndex + 1].startsWith("-") || 
+                                args[instanceIndex + 1].lowercase() in listOf("download", "update")) {
+                                break
+                            }
+                            instanceIndex++
+                            instanceTemporary += " " + args[instanceIndex]
+                            
+                            // Update resolved path with new instance name
+                            pathTemporary = when {
+                                os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instanceTemporary"
+                                os == "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instanceTemporary"
+                                else -> pathTemporary // shouldn't reach here
+                            }
+                        }
+                        
+                        path = pathTemporary
                         i = instanceIndex
                     }
                 }
@@ -207,22 +232,6 @@ object ModCheck {
                 }
             }
             i++
-        }
-
-        if (instance != null && path == null) {
-            val userHome = System.getProperty("user.home")
-            path = when {
-                os == "windows" -> {
-                    println("Error: --instance is not supported on Windows. Please use --path <directory> instead.")
-                    exitProcess(1)
-                }
-                os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instance"
-                os == "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instance"
-                else -> {
-                    println("Unknown OS for --instance path resolution: $os")
-                    exitProcess(1)
-                }
-            }
         }
 
         if (function == null) {
