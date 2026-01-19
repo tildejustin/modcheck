@@ -124,7 +124,7 @@ object ModCheck {
         var os = ModCheckUtils.currentOS()
         var accessibility = false
         var version = "1.16.1"
-        var path: String? = null
+        var path: String? = System.getenv("INST_DIR")
         var function: String? = null
 
 
