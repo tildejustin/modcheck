@@ -112,6 +112,20 @@ object ModCheck {
         }
     }
 
+    private fun readPrismVersion(): String? {
+        return try {
+            System.getenv("INST_DIR")
+                ?.takeIf { isValidPath(it) }
+                ?.let { Paths.get(it).resolve("mmc-pack.json") }
+                ?.let { String(Files.readAllBytes(it), Charsets.UTF_8) }
+                ?.let { ModCheckUtils.json.decodeFromString<MmcPackJson>(it) }
+                ?.components?.first { it.uid == "net.minecraft" }?.version
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     private fun handleCliMode(args: Array<String>) {
         // Load mod list for CLI
         val mods = ModCheckUtils.json.decodeFromString<Meta>(
@@ -121,9 +135,9 @@ object ModCheck {
 
         // Defaults
         var category = "rsg"
-        var os = ModCheckUtils.currentOS()
+        val os = ModCheckUtils.currentOS()
         var accessibility = false
-        var version = "1.16.1"
+        var version = readPrismVersion() ?: "1.16.1"
         var path: String? = System.getenv("INST_DIR")
         var function: String? = null
         // Adjust default if instance name contains "ssg"
