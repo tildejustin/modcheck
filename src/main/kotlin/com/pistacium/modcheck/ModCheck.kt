@@ -126,7 +126,10 @@ object ModCheck {
         var version = "1.16.1"
         var path: String? = System.getenv("INST_DIR")
         var function: String? = null
-
+        // Adjust default if instance name contains "ssg"
+        if (System.getenv("INST_NAME")?.contains(Regex("(?i)(?<![a-z])ssg(?![a-z])")) == true) {
+            category = "ssg"
+        }
 
         // Parsing args
         var i = 0
