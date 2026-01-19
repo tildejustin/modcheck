@@ -5,6 +5,7 @@ import com.pistacium.modcheck.util.*
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.*
+import java.lang.System.err
 import java.net.URI
 import java.nio.file.*
 import java.util.concurrent.*
@@ -117,13 +118,19 @@ object ModCheck {
             System.getenv("INST_DIR")
                 ?.takeIf { isValidPath(it) }
                 ?.let { Paths.get(it).resolve("mmc-pack.json") }
+                ?.takeIf { Files.exists(it) }
                 ?.let { String(Files.readAllBytes(it), Charsets.UTF_8) }
                 ?.let { ModCheckUtils.json.decodeFromString<MmcPackJson>(it) }
-                ?.components?.first { it.uid == "net.minecraft" }?.version
+                ?.components?.firstOrNull { it.uid == "net.minecraft" }?.version
         } catch (e: Exception) {
             e.printStackTrace()
             null
         }
+    }
+
+    private fun errorAndExit(message: String): Nothing {
+        err.println(message)
+        exitProcess(1)
     }
 
     private fun handleCliMode(args: Array<String>) {
@@ -150,8 +157,7 @@ object ModCheck {
         while (i < args.size) {
             when (args[i].lowercase()) {
                 "help", "-h", "--help" -> {
-                    printHelp()
-                    return
+                    printHelpAndExit(System.out)
                 }
                 "version", "-v" -> {
                     println("ModCheck version: $applicationVersion")
@@ -160,13 +166,12 @@ object ModCheck {
                 "--category" -> {
                     if (i + 1 < args.size) {
                         val value = args[i + 1].lowercase()
+                        i++
                         if (value == "rsg" || value == "ssg") {
                             category = value
                         } else {
-                            println("Invalid category: $value")
-                            exitProcess(1)
+                            errorAndExit("Invalid category: $value")
                         }
-                        i++
                     }
                 }
                 "--accessibility" -> {
@@ -180,84 +185,49 @@ object ModCheck {
                 }
                 "--path" -> {
                     if (i + 1 < args.size) {
-                        var pathTemporary = args[i + 1]
-                        var pathIndex = i + 1
-                        
-                        // Concatenate arguments until path is valid
-                        while (!isValidPath(pathTemporary) && pathIndex + 1 < args.size) {
-                            // Stop loop if next argument is a flag
-                            if (args[pathIndex + 1].startsWith("-")) {
-                                break
-                            }
-                            pathIndex++
-                            pathTemporary += " " + args[pathIndex]
-                        }
-                        
-                        path = pathTemporary
-                        i = pathIndex
+                        path = args[i + 1]
+                        i++
                     }
                 }
                 "--instance" -> {
                     if (i + 1 < args.size) {
-                        var instanceTemporary = args[i + 1]
-                        var instanceIndex = i + 1
+                        val instanceName = args[i + 1]
+                        i++
                         val userHome = System.getProperty("user.home")
 
                         // Get initial resolved path from instance name
-                        var pathTemporary = when {
+                        path = when {
                             os == "windows" -> {
-                                println("Error: --instance is not supported on Windows. Please use --path <directory> instead.")
-                                exitProcess(1)
+                                errorAndExit("Error: --instance is not supported on Windows. Please use --path <directory> instead.")
                             }
-                            os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instanceTemporary"
-                            os == "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instanceTemporary"
+                            os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instanceName"
+                            os == "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instanceName"
                             else -> {
-                                println("Unknown OS for --instance path resolution: $os")
-                                exitProcess(1)
+                                errorAndExit("Unknown OS for --instance path resolution: $os")
                             }
                         }
-                        
-                        // Concatenate arguments until path is valid (same loop as --path)
-                        while (!isValidPath(pathTemporary) && instanceIndex + 1 < args.size) {
-                            // Stop loop if next argument is a flag or command
-                            if (args[instanceIndex + 1].startsWith("-") || 
-                                args[instanceIndex + 1].lowercase() in listOf("download", "update")) {
-                                break
-                            }
-                            instanceIndex++
-                            instanceTemporary += " " + args[instanceIndex]
-                            
-                            // Update resolved path with new instance name
-                            pathTemporary = when {
-                                os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instanceTemporary"
-                                os == "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instanceTemporary"
-                                else -> pathTemporary // shouldn't reach here
-                            }
-                        }
-                        
-                        path = pathTemporary
-                        i = instanceIndex
                     }
                 }
                 "download", "update" -> {
+                    if (function != null) {
+                        errorAndExit("Error at arg $i: cannot specify multiple actions")
+                    }
                     function = args[i].lowercase()
                 }
                 else -> {
-                    // edge cases?
+                    errorAndExit("Invalid argument: ${args[i]}")
                 }
             }
             i++
         }
 
         if (function == null) {
-            printHelp()
-            exitProcess(1)
+            printHelpAndExit()
         }
 
         if (path == null) {
-            println("Error: Either --path <directory> or --instance <name> is required.")
-            printHelp()
-            exitProcess(1)
+            err.println("Error: Either --path <directory> or --instance <name> is required.")
+            printHelpAndExit()
         }
 
         // Print out the values
@@ -273,8 +243,7 @@ object ModCheck {
         }
 
         if (modsDir == null || !Files.exists(modsDir)) {
-            println("No mods directory found at: $modsDir")
-            return
+            errorAndExit("No mods directory found at: $modsDir")
         }
 
         println("Options:")
@@ -368,8 +337,8 @@ object ModCheck {
         }
     }
 
-    private fun printHelp() {
-        println("""
+    private fun printHelpAndExit(ps: PrintStream = err): Nothing {
+        ps.println("""
             ModCheck CLI
 
             Usage: java -jar modcheck.jar [options] <download|update>
@@ -396,5 +365,6 @@ object ModCheck {
 
             Run without arguments to start the GUI.
         """.trimIndent())
+        exitProcess(if (ps == err) 1 else 0)
     }
 }
