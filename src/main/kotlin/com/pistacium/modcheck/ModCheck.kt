@@ -141,14 +141,14 @@ object ModCheck {
         availableMods.addAll(mods)
 
         // Defaults
-        var category = "rsg"
+        var category: String? = null
         val os = ModCheckUtils.currentOS()
         var accessibility = false
         var version = readPrismVersion() ?: "1.16.1"
         var path: String? = System.getenv("INST_DIR")
         var function: String? = null
-        // Adjust default if instance name contains "ssg"
-        if (System.getenv("INST_NAME")?.contains(Regex("(?i)(?<![a-z])ssg(?![a-z])")) == true) {
+        // Adjust default if instance name contains "ssg"/"set-seed"
+        if (System.getenv("INST_NAME")?.contains(Regex("(?i)(?<![a-z])(?:ssg|set.?seed)(?![a-z])")) == true) {
             category = "ssg"
         }
 
@@ -246,6 +246,18 @@ object ModCheck {
             errorAndExit("No mods directory found at: $modsDir")
         }
 
+        // default category detection
+        if (category == null) {
+            val ssgMod = getFirstSSGMod(modsDir)
+            if (ssgMod != null) {
+                println("SSG mod ${ssgMod.name} found, defaulting category to SSG")
+                category = "ssg"
+            } else {
+                println("No SSG mods found, defaulting category to RSG")
+                category = "rsg"
+            }
+        }
+
         println("Options:")
         println("  Category: ${if (category == "rsg") "Random Seed Glitchless" else "Set Seed Glitchless"}")
         println("  OS: ${os.replaceFirstChar { it.uppercase() }}")
@@ -335,6 +347,19 @@ object ModCheck {
             }
             println("Updated $count mod(s). Done.")
         }
+    }
+
+    private fun getFirstSSGMod(modsDir: Path): FabricModJson? {
+        val modFiles = Files.list(modsDir)
+        for (file in modFiles) {
+            if (file.extension != "jar") continue
+            val fmj = try { ModCheckUtils.readFabricModJson(file) } catch (_: Exception) { null }
+            if (fmj == null) continue
+            if (availableMods.find { it.modid == fmj.id || it.name == fmj.name }?.traits?.contains("ssg-only") == true) {
+                return fmj
+            }
+        }
+        return null
     }
 
     private fun printHelpAndExit(ps: PrintStream = err): Nothing {
