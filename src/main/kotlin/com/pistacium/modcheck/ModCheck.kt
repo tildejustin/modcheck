@@ -5,6 +5,7 @@ import com.pistacium.modcheck.util.*
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.*
+import java.lang.System.err
 import java.net.URI
 import java.nio.file.*
 import java.util.concurrent.*
@@ -112,6 +113,26 @@ object ModCheck {
         }
     }
 
+    private fun readPrismVersion(): String? {
+        return try {
+            System.getenv("INST_DIR")
+                ?.takeIf { isValidPath(it) }
+                ?.let { Paths.get(it).resolve("mmc-pack.json") }
+                ?.takeIf { Files.exists(it) }
+                ?.let { String(Files.readAllBytes(it), Charsets.UTF_8) }
+                ?.let { ModCheckUtils.json.decodeFromString<MmcPackJson>(it) }
+                ?.components?.firstOrNull { it.uid == "net.minecraft" }?.version
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private fun errorAndExit(message: String): Nothing {
+        err.println(message)
+        exitProcess(1)
+    }
+
     private fun handleCliMode(args: Array<String>) {
         // Load mod list for CLI
         val mods = ModCheckUtils.json.decodeFromString<Meta>(
@@ -120,21 +141,23 @@ object ModCheck {
         availableMods.addAll(mods)
 
         // Defaults
-        var category = "rsg"
-        var os = ModCheckUtils.currentOS()
+        var category: String? = null
+        val os = ModCheckUtils.currentOS()
         var accessibility = false
-        var version = "1.16.1"
-        var path: String? = null
+        var version = readPrismVersion() ?: "1.16.1"
+        var path: String? = System.getenv("INST_DIR")
         var function: String? = null
-
+        // Adjust default if instance name contains "ssg"/"set-seed"
+        if (System.getenv("INST_NAME")?.contains(Regex("(?i)(?<![a-z])(?:ssg|set.?seed)(?![a-z])")) == true) {
+            category = "ssg"
+        }
 
         // Parsing args
         var i = 0
         while (i < args.size) {
             when (args[i].lowercase()) {
                 "help", "-h", "--help" -> {
-                    printHelp()
-                    return
+                    printHelpAndExit(System.out)
                 }
                 "version", "-v" -> {
                     println("ModCheck version: $applicationVersion")
@@ -143,13 +166,12 @@ object ModCheck {
                 "--category" -> {
                     if (i + 1 < args.size) {
                         val value = args[i + 1].lowercase()
+                        i++
                         if (value == "rsg" || value == "ssg") {
                             category = value
                         } else {
-                            println("Invalid category: $value")
-                            exitProcess(1)
+                            errorAndExit("Invalid category: $value")
                         }
-                        i++
                     }
                 }
                 "--accessibility" -> {
@@ -163,84 +185,49 @@ object ModCheck {
                 }
                 "--path" -> {
                     if (i + 1 < args.size) {
-                        var pathTemporary = args[i + 1]
-                        var pathIndex = i + 1
-                        
-                        // Concatenate arguments until path is valid
-                        while (!isValidPath(pathTemporary) && pathIndex + 1 < args.size) {
-                            // Stop loop if next argument is a flag
-                            if (args[pathIndex + 1].startsWith("-")) {
-                                break
-                            }
-                            pathIndex++
-                            pathTemporary += " " + args[pathIndex]
-                        }
-                        
-                        path = pathTemporary
-                        i = pathIndex
+                        path = args[i + 1]
+                        i++
                     }
                 }
                 "--instance" -> {
                     if (i + 1 < args.size) {
-                        var instanceTemporary = args[i + 1]
-                        var instanceIndex = i + 1
+                        val instanceName = args[i + 1]
+                        i++
                         val userHome = System.getProperty("user.home")
 
                         // Get initial resolved path from instance name
-                        var pathTemporary = when {
+                        path = when {
                             os == "windows" -> {
-                                println("Error: --instance is not supported on Windows. Please use --path <directory> instead.")
-                                exitProcess(1)
+                                errorAndExit("Error: --instance is not supported on Windows. Please use --path <directory> instead.")
                             }
-                            os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instanceTemporary"
-                            os == "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instanceTemporary"
+                            os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instanceName"
+                            os == "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instanceName"
                             else -> {
-                                println("Unknown OS for --instance path resolution: $os")
-                                exitProcess(1)
+                                errorAndExit("Unknown OS for --instance path resolution: $os")
                             }
                         }
-                        
-                        // Concatenate arguments until path is valid (same loop as --path)
-                        while (!isValidPath(pathTemporary) && instanceIndex + 1 < args.size) {
-                            // Stop loop if next argument is a flag or command
-                            if (args[instanceIndex + 1].startsWith("-") || 
-                                args[instanceIndex + 1].lowercase() in listOf("download", "update")) {
-                                break
-                            }
-                            instanceIndex++
-                            instanceTemporary += " " + args[instanceIndex]
-                            
-                            // Update resolved path with new instance name
-                            pathTemporary = when {
-                                os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instanceTemporary"
-                                os == "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instanceTemporary"
-                                else -> pathTemporary // shouldn't reach here
-                            }
-                        }
-                        
-                        path = pathTemporary
-                        i = instanceIndex
                     }
                 }
                 "download", "update" -> {
+                    if (function != null) {
+                        errorAndExit("Error at arg $i: cannot specify multiple actions")
+                    }
                     function = args[i].lowercase()
                 }
                 else -> {
-                    // edge cases?
+                    errorAndExit("Invalid argument: ${args[i]}")
                 }
             }
             i++
         }
 
         if (function == null) {
-            printHelp()
-            exitProcess(1)
+            printHelpAndExit()
         }
 
         if (path == null) {
-            println("Error: Either --path <directory> or --instance <name> is required.")
-            printHelp()
-            exitProcess(1)
+            err.println("Error: Either --path <directory> or --instance <name> is required.")
+            printHelpAndExit()
         }
 
         // Print out the values
@@ -256,8 +243,19 @@ object ModCheck {
         }
 
         if (modsDir == null || !Files.exists(modsDir)) {
-            println("No mods directory found at: $modsDir")
-            return
+            errorAndExit("No mods directory found at: $modsDir")
+        }
+
+        // default category detection
+        if (category == null) {
+            val ssgMod = getFirstSSGMod(modsDir)
+            if (ssgMod != null) {
+                println("SSG mod ${ssgMod.name} found, defaulting category to SSG")
+                category = "ssg"
+            } else {
+                println("No SSG mods found, defaulting category to RSG")
+                category = "rsg"
+            }
         }
 
         println("Options:")
@@ -351,8 +349,21 @@ object ModCheck {
         }
     }
 
-    private fun printHelp() {
-        println("""
+    private fun getFirstSSGMod(modsDir: Path): FabricModJson? {
+        val modFiles = Files.list(modsDir)
+        for (file in modFiles) {
+            if (file.extension != "jar") continue
+            val fmj = try { ModCheckUtils.readFabricModJson(file) } catch (_: Exception) { null }
+            if (fmj == null) continue
+            if (availableMods.find { it.modid == fmj.id || it.name == fmj.name }?.traits?.contains("ssg-only") == true) {
+                return fmj
+            }
+        }
+        return null
+    }
+
+    private fun printHelpAndExit(ps: PrintStream = err): Nothing {
+        ps.println("""
             ModCheck CLI
 
             Usage: java -jar modcheck.jar [options] <download|update>
@@ -379,5 +390,6 @@ object ModCheck {
 
             Run without arguments to start the GUI.
         """.trimIndent())
+        exitProcess(if (ps == err) 1 else 0)
     }
 }
