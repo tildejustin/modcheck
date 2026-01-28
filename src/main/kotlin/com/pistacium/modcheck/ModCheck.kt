@@ -44,14 +44,14 @@ object ModCheck {
                 // Get available versions
                 setStatus(ModCheckStatus.LOADING_AVAILABLE_VERSIONS)
                 availableVersions = ModCheckUtils.json.decodeFromString(
-                    URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "schema-6"}/important_versions.json").toURL()
+                    URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "schema-7"}/important_versions.json").toURL()
                         .readText()
                 )
 
                 // Get mod list
                 setStatus(ModCheckStatus.LOADING_MOD_LIST)
                 val mods = ModCheckUtils.json.decodeFromString<Meta>(
-                    URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "schema-6"}/mods.json").toURL().readText()
+                    URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "schema-7"}/mods.json").toURL().readText()
                 ).mods
                 // val mods = Json.decodeFromString<Meta>(Path.of("/home/justin/IdeaProjects/mcsr-meta/mods.json").readText()).mods
                 frameInstance.progressBar?.value = 60
