@@ -374,7 +374,7 @@ object ModCheck {
                 update                       Update existing mods
 
             Examples:
-                java -jar modcheck.jar --category random --version 1.16.1 --instance instance1 download
+                java -jar modcheck.jar --category rsg --version 1.16.1 --instance instance1 download
                     Downloads speedrunning mods for 1.16.1 RSG into instance1
 
             Run without arguments to start the GUI.
