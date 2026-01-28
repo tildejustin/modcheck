@@ -2,6 +2,7 @@ package com.pistacium.modcheck
 
 import com.formdev.flatlaf.FlatDarkLaf
 import com.pistacium.modcheck.util.*
+import io.github.z4kn4fein.semver.toVersionOrNull
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.*
@@ -21,7 +22,7 @@ object ModCheck {
 
     lateinit var frameInstance: ModCheckFrameFormExt
 
-    lateinit var availableVersions: MutableList<String>
+    lateinit var availableVersions: List<String>
 
     val availableMods: ArrayList<Meta.Mod> = ArrayList()
 
@@ -41,18 +42,26 @@ object ModCheck {
             try {
                 frameInstance = ModCheckFrameFormExt()
 
-                // Get available versions
-                setStatus(ModCheckStatus.LOADING_AVAILABLE_VERSIONS)
-                availableVersions = ModCheckUtils.json.decodeFromString(
-                    URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "schema-7"}/important_versions.json").toURL()
-                        .readText()
-                )
-
                 // Get mod list
                 setStatus(ModCheckStatus.LOADING_MOD_LIST)
                 val mods = ModCheckUtils.json.decodeFromString<Meta>(
                     URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "schema-7"}/mods.json").toURL().readText()
                 ).mods
+
+                setStatus(ModCheckStatus.LOADING_AVAILABLE_VERSIONS)
+                val topVersions = mutableListOf("1.16.1", "1.15.2", "1.11.2", "1.8.9", "1.7.10", "1.16.5", "1.12.2", "1.8", "1.12", "20w14infinite")
+
+                // Get available versions
+                availableVersions = mods.flatMap { mod -> mod.versions.flatMap { it.target_version } }.distinct().sortedWith { first, second ->
+                    val firstVersion = first.toVersionOrNull(false)
+                    val secondVersion = second.toVersionOrNull(false)
+                    if (firstVersion != null && secondVersion != null) secondVersion.compareTo(firstVersion)
+                    else if (firstVersion == null && secondVersion != null) 1
+                    else if (firstVersion != null && secondVersion == null) -1
+                    else second.compareTo(first)
+                }.filter { it !in topVersions }
+                availableVersions = topVersions + availableVersions
+
                 // val mods = Json.decodeFromString<Meta>(Path.of("/home/justin/IdeaProjects/mcsr-meta/mods.json").readText()).mods
                 frameInstance.progressBar?.value = 60
 
