@@ -300,8 +300,8 @@ object ModCheck {
             return
         }
 
-        if (ranked == true) {
-            syncRanked(modsDir, version, function)
+        if (ranked == true && version == "1.16.1") {
+            syncRanked(modsDir, function)
         }
 
         if (function == "download") {
@@ -323,7 +323,6 @@ object ModCheck {
                     if (trait == "ssg-only" && category != "ssg") return@filter false
                     if (trait == "rsg-only" && category != "rsg") return@filter false
                     if (trait == "accessibility" && !accessibility) return@filter false
-                    if (trait == "ranked" && !ranked) return@filter false
                     if (trait == "mac-only" && os != "osx") return@filter false
                 }
                 true
@@ -415,11 +414,7 @@ object ModCheck {
         return null
     }
 
-    private fun syncRanked(modsDir: Path, mcVersion: String, function: String) {
-        if (mcVersion != "1.16.1") {
-            println("Skipping MCSR Ranked sync, only compatible with Minecraft version 1.16.1")
-            return
-        }
+    private fun syncRanked(modsDir: Path, function: String) {
         val client = OkHttpClient()
         try {
             val rankedEndpoint = "https://api.modrinth.com/v2/project/mcsr-ranked/version"
@@ -477,16 +472,12 @@ object ModCheck {
 
             if (installed != null) {
                 println("Deleting out of date Ranked mod")
-                Files.deleteIfExists(installed!!.first)
+                Files.deleteIfExists(installed.first)
             }
 
-            try {
-                println("Downloading MCSR Ranked")
-                val bytes = URI.create(modUrl).toURL().readBytes()
-                Files.write(modsDir.resolve(filename), bytes)
-            } catch (e: Exception) {
-                println("Failed to download MCSR Ranked: ${e.message}")
-            }
+            println("Downloading MCSR Ranked")
+            val bytes = URI.create(modUrl).toURL().readBytes()
+            Files.write(modsDir.resolve(filename), bytes)
             println("Download MCSR Ranked Complete.")
 
         }
