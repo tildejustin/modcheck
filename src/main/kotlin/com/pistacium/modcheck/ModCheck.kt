@@ -13,6 +13,9 @@ import java.util.concurrent.*
 import javax.swing.JOptionPane
 import kotlin.io.path.extension
 import kotlin.system.exitProcess
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import kotlinx.serialization.json.*
 
 object ModCheck {
     fun setStatus(status: ModCheckStatus) {
@@ -142,23 +145,44 @@ object ModCheck {
         exitProcess(1)
     }
 
+    private val client = OkHttpClient()
+
     private fun handleCliMode(args: Array<String>) {
         // Load mod list for CLI
-        val mods = ModCheckUtils.json.decodeFromString<Meta>(
-            URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "schema-6"}/mods.json").toURL().readText()
-        ).mods
+        val metaEndpoint = "https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "schema-7"}/mods.json"
+        val request = Request.Builder()
+        .url(metaEndpoint)
+        .build()
+
+        val meta = try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    errorAndExit("Error fetching meta information: ${response.code}")
+                }
+                response.body?.string()
+            }
+        } catch (e: IOException) {
+            errorAndExit("Failed to fetch meta information: ${e.message}")
+        } ?: errorAndExit("Meta response was empty")
+
+        val mods = ModCheckUtils.json.decodeFromString<Meta>(meta).mods
         availableMods.addAll(mods)
+
 
         // Defaults
         var category: String? = null
         val os = ModCheckUtils.currentOS()
         var accessibility = false
+        var ranked: Boolean? = null
         var version = readPrismVersion() ?: "1.16.1"
         var path: String? = System.getenv("INST_DIR")
         var function: String? = null
         // Adjust default if instance name contains "ssg"/"set-seed"
         if (System.getenv("INST_NAME")?.contains(Regex("(?i)(?<![a-z])(?:ssg|set.?seed)(?![a-z])")) == true) {
             category = "ssg"
+        }
+        if (System.getenv("INST_NAME")?.contains(Regex("(?i)(?<![a-z])(?:ranked)(?![a-z])")) == true) {
+            ranked = true
         }
 
         // Parsing args
@@ -185,6 +209,9 @@ object ModCheck {
                 }
                 "--accessibility" -> {
                     accessibility = true
+                }
+                "--ranked" -> {
+                    ranked = true
                 }
                 "--version" -> {
                     if (i + 1 < args.size) {
@@ -217,7 +244,7 @@ object ModCheck {
                         }
                     }
                 }
-                "download", "update" -> {
+                "download", "update", "debug" -> {
                     if (function != null) {
                         errorAndExit("Error at arg $i: cannot specify multiple actions")
                     }
@@ -267,12 +294,32 @@ object ModCheck {
             }
         }
 
+        if (ranked == null) {
+            val rankedMod = getRankedMod(modsDir)
+            if (rankedMod != null) {
+                println("MCSR Ranked found, defaulting ranked to true")
+                ranked = true
+            } else {
+                println("No MCSR Ranked found, defaulting ranked to false")
+                ranked = false
+            }
+        }
+
         println("Options:")
         println("  Category: ${if (category == "rsg") "Random Seed Glitchless" else "Set Seed Glitchless"}")
         println("  OS: ${os.replaceFirstChar { it.uppercase() }}")
         println("  Accessibility: $accessibility")
+        println("  Ranked: $ranked")
         println("  Version: $version")
         println("  Mod Folder: $modsDir")
+
+        if (function == "debug") {
+            return
+        }
+
+        if (ranked == true && version == "1.16.1") {
+            syncRanked(modsDir, function)
+        }
 
         if (function == "download") {
             // 1. Select mods
@@ -312,9 +359,9 @@ object ModCheck {
                 val filename = url.substringAfterLast("/")
                 try {
                     println("Downloading ${mod.name}")
-                    val bytes = URI.create(url).toURL().readBytes()
-                    Files.write(modsDir.resolve(filename), bytes)
-                } catch (e: Exception) {
+                    downloadFile(url, modsDir.resolve(filename))
+                }
+                catch (e: Exception) {
                     println("Failed to download ${mod.name}: ${e.message}")
                 }
                 count++
@@ -345,9 +392,8 @@ object ModCheck {
                 val url = modVersion.url
                 val filename = url.substringAfterLast("/")
                 try {
-                    println("Updating ${mod.name} from ${oldFile.fileName} to $filename")
-                    val bytes = URI.create(url).toURL().readBytes()
-                    Files.write(modsDir.resolve(filename), bytes)
+                    println("Updating ${mod.name}")
+                    downloadFile(url, modsDir.resolve(filename))
                     Files.deleteIfExists(oldFile)
                 } catch (e: Exception) {
                     println("Failed to update ${mod.name}: ${e.message}")
@@ -371,6 +417,90 @@ object ModCheck {
         return null
     }
 
+    private fun getRankedMod(modsDir: Path): Pair<Path, FabricModJson>? {
+        val modFiles = Files.list(modsDir)
+        for (file in modFiles) {
+            if (file.extension != "jar") continue
+            val fmj = try { ModCheckUtils.readFabricModJson(file) } catch (_: Exception) { null }
+            if (fmj == null) continue
+            if (fmj.id == "mcsrranked") {
+                return Pair(file, fmj)
+            }
+        }
+        return null
+    }
+
+    private fun syncRanked(modsDir: Path, function: String) {
+        try {
+            val rankedEndpoint = "https://api.modrinth.com/v2/project/mcsr-ranked/version"
+            val request = Request.Builder()
+                .url(rankedEndpoint)
+                .build()
+
+
+            val body = client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("HTTP Failure: ${response.code}")
+                }
+                response.body?.string() ?: throw IOException("HTTP Failure: empty response body")
+            }
+            
+            val latestJson = ModCheckUtils.json.parseToJsonElement(body)
+
+            val latestVersion = latestJson.jsonArray[0]
+
+            val versionNumber = latestVersion 
+                .jsonObject["version_number"]!!
+                .jsonPrimitive.content
+            
+            val modUrl = latestVersion 
+                .jsonObject["files"]!!
+                .jsonArray[0]!!
+                .jsonObject["url"]!!
+                .jsonPrimitive.content
+
+            val filename = latestVersion
+                .jsonObject["files"]!!
+                .jsonArray[0]!!
+                .jsonObject["filename"]!!
+                .jsonPrimitive.content
+
+            val installed = getRankedMod(modsDir)
+
+            if (installed == null && function == "update") {
+                return
+            }
+
+            val currentVersion = installed?.second?.version
+
+            if (currentVersion == versionNumber) {
+               println("Ranked Mod is up to date.") 
+               return
+            }
+
+            println("Downloading MCSR Ranked")
+            downloadFile(modUrl, modsDir.resolve(filename))
+            if (installed != null) {
+                println("Deleting out of date Ranked mod")
+                Files.deleteIfExists(installed.first)
+            }
+            println("Download MCSR Ranked Complete.")
+
+        }
+        catch (e: Exception) {
+            println("Failed to sync MCSR Ranked: ${e.message}")
+        }
+    }
+    
+    private fun downloadFile(url: String, modPath: Path) {
+        val request = Request.Builder().url(url).build()
+        val bytes = client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("HTTP Failure: ${response.code}")
+            response.body?.bytes() ?: throw IOException("HTTP Failure: empty response body")
+        }
+        Files.write(modPath, bytes)
+    }
+
     private fun printHelpAndExit(ps: PrintStream = err): Nothing {
         ps.println("""
             ModCheck CLI
@@ -382,6 +512,7 @@ object ModCheck {
                 --category <rsg|ssg>        Specify the category (default: rsg)
                 --version <version>         Specify Minecraft version (default: 1.16.1)
                 --accessibility             Include accessibility mods (default: false)
+                --ranked                    Include mcsrranked mod (default: false)
                 --instance <name>           Specify your instance name (uses default PrismLauncher path)
                     or
                 --path <directory>          Specify a different path to your instance
