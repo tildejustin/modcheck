@@ -145,12 +145,29 @@ object ModCheck {
         exitProcess(1)
     }
 
+    private val client = OkHttpClient()
+
     private fun handleCliMode(args: Array<String>) {
         // Load mod list for CLI
-        val mods = ModCheckUtils.json.decodeFromString<Meta>(
-            URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "schema-6"}/mods.json").toURL().readText()
-        ).mods
+        val metaEndpoint = "https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "schema-7"}/mods.json"
+        val request = Request.Builder()
+        .url(metaEndpoint)
+        .build()
+
+        val meta = try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    errorAndExit("Error fetching meta information: ${response.code}")
+                }
+                response.body?.string()
+            }
+        } catch (e: IOException) {
+            errorAndExit("Failed to fetch meta information: ${e.message}")
+        } ?: errorAndExit("Meta response was empty")
+
+        val mods = ModCheckUtils.json.decodeFromString<Meta>(meta).mods
         availableMods.addAll(mods)
+
 
         // Defaults
         var category: String? = null
@@ -342,9 +359,9 @@ object ModCheck {
                 val filename = url.substringAfterLast("/")
                 try {
                     println("Downloading ${mod.name}")
-                    val bytes = URI.create(url).toURL().readBytes()
-                    Files.write(modsDir.resolve(filename), bytes)
-                } catch (e: Exception) {
+                    downloadFile(url, modsDir.resolve(filename))
+                }
+                catch (e: Exception) {
                     println("Failed to download ${mod.name}: ${e.message}")
                 }
                 count++
@@ -375,9 +392,8 @@ object ModCheck {
                 val url = modVersion.url
                 val filename = url.substringAfterLast("/")
                 try {
-                    println("Updating ${mod.name} from ${oldFile.fileName} to $filename")
-                    val bytes = URI.create(url).toURL().readBytes()
-                    Files.write(modsDir.resolve(filename), bytes)
+                    println("Updating ${mod.name}")
+                    downloadFile(url, modsDir.resolve(filename))
                     Files.deleteIfExists(oldFile)
                 } catch (e: Exception) {
                     println("Failed to update ${mod.name}: ${e.message}")
@@ -415,7 +431,6 @@ object ModCheck {
     }
 
     private fun syncRanked(modsDir: Path, function: String) {
-        val client = OkHttpClient()
         try {
             val rankedEndpoint = "https://api.modrinth.com/v2/project/mcsr-ranked/version"
             val request = Request.Builder()
@@ -423,17 +438,11 @@ object ModCheck {
                 .build()
 
 
-            val latest: String? = client.newCall(request).execute().use { response ->
+            val body = client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    println("Error fetching ranked mod information: ${response.code}")
-                    return
+                    throw IOException("HTTP Failure: ${response.code}")
                 }
-                response.body?.string()
-            }
-
-            val body = latest ?: run {
-                println("Modrinth API response was empty")
-                return
+                response.body?.string() ?: throw IOException("HTTP Failure: empty response body")
             }
             
             val latestJson = ModCheckUtils.json.parseToJsonElement(body)
@@ -469,25 +478,27 @@ object ModCheck {
                return
             }
 
-
+            println("Downloading MCSR Ranked")
+            downloadFile(modUrl, modsDir.resolve(filename))
             if (installed != null) {
                 println("Deleting out of date Ranked mod")
                 Files.deleteIfExists(installed.first)
             }
-
-            println("Downloading MCSR Ranked")
-            val bytes = URI.create(modUrl).toURL().readBytes()
-            Files.write(modsDir.resolve(filename), bytes)
             println("Download MCSR Ranked Complete.")
 
         }
         catch (e: Exception) {
             println("Failed to sync MCSR Ranked: ${e.message}")
         }
-        finally {
-            client.dispatcher.executorService.shutdown()
-            client.connectionPool.evictAll()
+    }
+    
+    private fun downloadFile(url: String, modPath: Path) {
+        val request = Request.Builder().url(url).build()
+        val bytes = client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("HTTP Failure: ${response.code}")
+            response.body?.bytes() ?: throw IOException("HTTP Failure: empty response body")
         }
+        Files.write(modPath, bytes)
     }
 
     private fun printHelpAndExit(ps: PrintStream = err): Nothing {
