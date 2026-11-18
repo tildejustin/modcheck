@@ -16,6 +16,7 @@ dependencies {
     implementation("com.jetbrains.intellij.java:java-gui-forms-rt:203.7148.30")
     implementation("com.formdev:flatlaf:3.3")
     implementation("io.github.z4kn4fein:semver:1.4.2")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
 
 kotlin {
