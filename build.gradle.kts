@@ -1,10 +1,10 @@
 plugins {
-    kotlin("jvm") version "2.1.0"
-    kotlin("plugin.serialization") version "2.1.0"
+    kotlin("jvm") version "2.5.0-RC"
+    kotlin("plugin.serialization") version "2.5.0-RC"
 }
 
 group = "com.redlime"
-version = "3.1.1"
+version = "3.2.0"
 
 repositories {
     mavenCentral()
@@ -12,10 +12,10 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-    implementation("com.jetbrains.intellij.java:java-gui-forms-rt:203.7148.30")
-    implementation("com.formdev:flatlaf:3.3")
-    implementation("io.github.z4kn4fein:semver:1.4.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.13.0")
+    implementation("com.jetbrains.intellij.java:java-gui-forms-rt:263.7307.259")
+    implementation("com.formdev:flatlaf:3.8")
+    implementation("io.github.z4kn4fein:semver:3.1.0")
 }
 
 kotlin {

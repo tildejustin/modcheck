@@ -50,7 +50,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                 override fun getItem(): Any {
                     return try {
                         File(super.getItem() as String)
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         super.getItem()
                     }
                 }
@@ -177,7 +177,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
             val finalMaxCount = maxCount
             ModCheck.threadExecutor.submit {
                 val failedMods = ArrayList<Meta.Mod>()
-                for ((count, targetMod) in targetMods.withIndex()) {
+                for ([count, targetMod] in targetMods.withIndex()) {
                     progressBar.string = "Downloading " + targetMod.name
                     println("Downloading " + targetMod.name)
                     val downloadFiles = Stack<Path>()
@@ -195,8 +195,8 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
 
                 if (failedMods.isNotEmpty()) {
                     val failedModString = StringBuilder()
-                    for (failedMod in failedMods) {
-                        failedModString.append(failedMod.name).append(", ")
+                    for ((modid, name) in failedMods) {
+                        failedModString.append(name).append(", ")
                     }
                     JOptionPane.showMessageDialog(
                         this,
@@ -320,10 +320,10 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
                     }
                 }
                 var count = 0
-                for (newMod in replacedJars) {
+                for ((first, second) in replacedJars) {
                     // requires that the new mod and old mod have different filenames
-                    if (downloadFile(newMod.second, modFolder)) {
-                        Files.deleteIfExists(newMod.first)
+                    if (downloadFile(second, modFolder)) {
+                        Files.deleteIfExists(first)
                     }
                     count++
                     progressBar.value = count / replacedJars.size
@@ -364,7 +364,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
         githubSource.addActionListener {
             try {
                 Desktop.getDesktop().browse(URI("https://github.com/tildejustin/modcheck"))
-            } catch (ignored: Exception) {
+            } catch (_: Exception) {
             }
         }
         source.add(githubSource)
@@ -373,7 +373,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
         donateSource.addActionListener {
             try {
                 Desktop.getDesktop().browse(URI("https://ko-fi.com/redlimerl"))
-            } catch (ignored: Exception) {
+            } catch (_: Exception) {
             }
         }
         source.add(donateSource)
@@ -382,7 +382,7 @@ class ModCheckFrameFormExt : ModCheckFrameForm() {
         checkChangeLogSource.addActionListener {
             try {
                 Desktop.getDesktop().browse(URI("https://github.com/tildejustin/modcheck/releases/tag/" + ModCheck.applicationVersion))
-            } catch (ignored: Exception) {
+            } catch (_: Exception) {
             }
         }
         source.add(checkChangeLogSource)

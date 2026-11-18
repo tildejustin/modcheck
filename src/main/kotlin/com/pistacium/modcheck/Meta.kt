@@ -5,7 +5,6 @@ import kotlinx.serialization.*
 @Serializable
 data class Meta(val schemaVersion: Int, val mods: List<Mod>) {
     @Serializable
-    @OptIn(ExperimentalSerializationApi::class)
     data class Mod(
         val modid: String,
         val name: String,
@@ -20,7 +19,6 @@ data class Meta(val schemaVersion: Int, val mods: List<Mod>) {
     }
 
     @Serializable
-    @OptIn(ExperimentalSerializationApi::class)
     data class ModVersion(
         val target_version: List<String>,
         val version: String,

@@ -3,8 +3,6 @@
 
 Minecraft SpeedRun Mods Auto Installer/Updater
 
-original idea by [pistacium](https://github.com/pistacium/ModCheck)
-
 ## CLI Interface
 ModCheck can be run on the command line. This is useful for tools, powerusers, and more.
 

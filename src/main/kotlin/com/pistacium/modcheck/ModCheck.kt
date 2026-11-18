@@ -68,7 +68,7 @@ object ModCheck {
 
                 setStatus(ModCheckStatus.LOADING_MOD_RESOURCE)
                 val maxCount = mods.count()
-                for ((count, mod) in mods.withIndex()) {
+                for ([count, mod] in mods.withIndex()) {
                     frameInstance.progressBar?.string = "Loading information of " + mod.name
                     availableMods.add(mod)
                     frameInstance.progressBar?.value = (60 + ((((count + 1) * 1) / maxCount) * 40))
@@ -81,6 +81,7 @@ object ModCheck {
                 val sw = StringWriter()
                 val pw = PrintWriter(sw)
                 e.printStackTrace(pw)
+                e.printStackTrace()
                 val result = JOptionPane.showOptionDialog(
                     null,
                     sw.toString(),
@@ -97,7 +98,7 @@ object ModCheck {
                     clipboard.setContents(selection, selection)
                 }
 
-                exitProcess(0)
+                exitProcess(1)
             }
         }
     }
@@ -205,12 +206,12 @@ object ModCheck {
                         val userHome = System.getProperty("user.home")
 
                         // Get initial resolved path from instance name
-                        path = when {
-                            os == "windows" -> {
+                        path = when (os) {
+                            "windows" -> {
                                 errorAndExit("Error: --instance is not supported on Windows. Please use --path <directory> instead.")
                             }
-                            os == "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instanceName"
-                            os == "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instanceName"
+                            "linux" -> "$userHome/.local/share/PrismLauncher/instances/$instanceName"
+                            "osx" -> "$userHome/Library/Application Support/PrismLauncher/instances/$instanceName"
                             else -> {
                                 errorAndExit("Unknown OS for --instance path resolution: $os")
                             }
@@ -278,8 +279,7 @@ object ModCheck {
             // 1. Select mods
             // assumes that there are no conflicting recommended mods, which is a choice in meta design I will try to stick to
             val selectedMods = availableMods.filter { mod ->
-                val modVersion = mod.getModVersion(version)
-                if (modVersion == null) return@filter false
+                val modVersion = mod.getModVersion(version) ?: return@filter false
                 // prioritize sodium-mac
                 if (
                     mod.modid == "sodium" &&
@@ -301,8 +301,8 @@ object ModCheck {
                 println("Warning: No mods matched the selection criteria. Nothing to download.")
                 return
             }
-            for (mod in selectedMods) {
-                println("Selected ${mod.name}")
+            for ((_, name) in selectedMods) {
+                println("Selected $name")
             }
             // 2. Download selected mods
             var count = 0
@@ -341,7 +341,7 @@ object ModCheck {
                 return
             }
             var count = 0
-            for ((oldFile, mod, modVersion) in toUpdate) {
+            for ([oldFile, mod, modVersion] in toUpdate) {
                 val url = modVersion.url
                 val filename = url.substringAfterLast("/")
                 try {

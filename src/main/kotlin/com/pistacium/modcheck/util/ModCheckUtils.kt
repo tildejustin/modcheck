@@ -1,7 +1,6 @@
 package com.pistacium.modcheck.util
 
 import com.pistacium.modcheck.*
-import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 import java.awt.Desktop
 import java.awt.event.ActionEvent
@@ -63,7 +62,6 @@ object ModCheckUtils {
         return newVersion
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     val json = Json { ignoreUnknownKeys = true; prettyPrint = true; prettyPrintIndent = "  " }
 
     fun readFabricModJson(mod: Path): FabricModJson? {
@@ -72,7 +70,7 @@ object ModCheckUtils {
             val jsonData: ByteArray
             try {
                 jsonData = Files.readAllBytes(jsonFilePath)
-            } catch (e: NoSuchFileException) {
+            } catch (_: NoSuchFileException) {
                 return null
             }
             return json.decodeFromString<FabricModJson>(String(jsonData))
