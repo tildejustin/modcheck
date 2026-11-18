@@ -30,7 +30,9 @@ object ModCheck {
 
     val availableMods: ArrayList<Meta.Mod> = ArrayList()
 
-    val applicationVersion: String = ModCheck.javaClass.`package`.implementationVersion ?: "dev"
+    val applicationVersion: String = ModCheck.javaClass.`package`.implementationVersion ?: "unknown"
+
+    const val metaURL = "https://meta.mc.sr/schema-7/mods.json"
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -51,7 +53,7 @@ object ModCheck {
                 // Get mod list
                 setStatus(ModCheckStatus.LOADING_MOD_LIST)
                 val mods = ModCheckUtils.json.decodeFromString<Meta>(
-                    URI.create("https://meta.mc.sr/schema-7/mods.json").toURL().readText()
+                    URI.create(metaURL).toURL().readText()
                 ).mods
 
                 setStatus(ModCheckStatus.LOADING_AVAILABLE_VERSIONS)
@@ -68,7 +70,6 @@ object ModCheck {
                 }.filter { it !in topVersions }
                 availableVersions = topVersions + availableVersions
 
-                // val mods = Json.decodeFromString<Meta>(Path.of("/home/justin/IdeaProjects/mcsr-meta/mods.json").readText()).mods
                 frameInstance.progressBar?.value = 60
 
                 setStatus(ModCheckStatus.LOADING_MOD_RESOURCE)
@@ -152,9 +153,8 @@ object ModCheck {
 
     private fun handleCliMode(args: Array<String>) {
         // Load mod list for CLI
-        val metaEndpoint = "https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "schema-7"}/mods.json"
         val request = Request.Builder()
-        .url(metaEndpoint)
+        .url(metaURL)
         .build()
 
         val meta = try {
@@ -184,7 +184,7 @@ object ModCheck {
         if (System.getenv("INST_NAME")?.contains(Regex("(?i)(?<![a-z])(?:ssg|set.?seed)(?![a-z])")) == true) {
             category = "ssg"
         }
-        if (System.getenv("INST_NAME")?.contains(Regex("(?i)(?<![a-z])(?:ranked)(?![a-z])")) == true) {
+        if (System.getenv("INST_NAME")?.contains(Regex("(?i)(?<![a-z])ranked(?![a-z])")) == true) {
             ranked = true
         }
 
