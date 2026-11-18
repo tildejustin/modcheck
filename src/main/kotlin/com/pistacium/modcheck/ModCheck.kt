@@ -40,6 +40,8 @@ object ModCheck {
             return
         }
         // else run the gui
+        System.setProperty("awt.useSystemAAFontSettings", "on");
+        System.setProperty("swing.aatext", "true");
         
         FlatDarkLaf.setup()
         threadExecutor.submit {
