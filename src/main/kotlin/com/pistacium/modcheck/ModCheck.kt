@@ -318,7 +318,7 @@ object ModCheck {
             return
         }
 
-        if (ranked == true && version == "1.16.1") {
+        if (ranked && version == "1.16.1") {
             syncRanked(modsDir, function)
         }
 
@@ -455,13 +455,13 @@ object ModCheck {
             
             val modUrl = latestVersion 
                 .jsonObject["files"]!!
-                .jsonArray[0]!!
+                .jsonArray[0]
                 .jsonObject["url"]!!
                 .jsonPrimitive.content
 
             val filename = latestVersion
                 .jsonObject["files"]!!
-                .jsonArray[0]!!
+                .jsonArray[0]
                 .jsonObject["filename"]!!
                 .jsonPrimitive.content
 
