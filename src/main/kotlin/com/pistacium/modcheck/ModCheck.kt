@@ -49,7 +49,7 @@ object ModCheck {
                 // Get mod list
                 setStatus(ModCheckStatus.LOADING_MOD_LIST)
                 val mods = ModCheckUtils.json.decodeFromString<Meta>(
-                    URI.create("https://raw.githubusercontent.com/tildejustin/mcsr-meta/${if (applicationVersion == "dev") "staging" else "schema-7"}/mods.json").toURL().readText()
+                    URI.create("https://meta.mc.sr/schema-7/mods.json").toURL().readText()
                 ).mods
 
                 setStatus(ModCheckStatus.LOADING_AVAILABLE_VERSIONS)
